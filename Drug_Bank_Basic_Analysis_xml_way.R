@@ -120,6 +120,16 @@ drug_classfications_df <- function(rec) {
   }
   return(classfications)
 }
+
+# Extract drug synonyms df
+drug_synonyms_df <- function(rec) {
+  drug_key <- xmlValue(rec["drugbank-id"][[1]])
+  synonyms <- xmlToDataFrame(rec[["synonyms"]])
+  if (nrow(synonyms) > 0) {
+    synonyms$drug_key <- drug_key 
+  }
+  return(synonyms)
+}
 #max(nchar(a$absorption))
 children <- xmlChildren(top)
 drug <- map_df(children, ~drug_df(.x))
@@ -128,6 +138,7 @@ drug_articles <- map_df(children, ~drug_articles_df(.x))
 drug_books <- map_df(children, ~drug_books_df(.x))
 drug_links <- map_df(children, ~drug_links_df(.x))
 drug_classfications <- map_df(children, ~drug_classfications_df(.x))
+drug_synonyms <- map_df(children, ~drug_synonyms_df(.x))
 #db connection
 con <- dbConnect(odbc::odbc(), Driver = "SQL Server", Server = "MOHAMMED\\SQL2016", 
                 Database = "drugbank", Trusted_Connection = "True")
@@ -144,14 +155,14 @@ columnTypes <- list(description = "varchar(6349)", mechanism_of_action = "varcha
 
 #store drug in db
 dbWriteTable(conn = con, value = drug, name = "drug", field.types = columnTypes)
-# add primary key to drug table
+# add primary key of drug table
 dbExecute(conn = con, statement = "Alter table drug
 alter column primary_key varchar(255) NOT NULL;")
 dbExecute(conn = con, statement = "Alter table drug add primary key (primary_key);")
 
 #store drug groups in db
 dbWriteTable(conn = con, value = drug_groups, name = "drug_groups")
-# add foreign key to drug table
+# add foreign key of drug table
 dbExecute(conn = con, statement = "Alter table drug_groups
 alter column drug_key varchar(255) NOT NULL;")
 dbExecute(conn = con, statement = "Alter table drug_groups ADD CONSTRAINT FK_groups_drug 
@@ -159,7 +170,7 @@ dbExecute(conn = con, statement = "Alter table drug_groups ADD CONSTRAINT FK_gro
 
 #store drug articles in db
 dbWriteTable(conn = con, value = drug_articles, name = "drug_articles")
-# add foreign key to drug table
+# add foreign key of drug table
 dbExecute(conn = con, statement = "Alter table drug_articles
 alter column drug_key varchar(255) NOT NULL;")
 dbExecute(conn = con, statement = "Alter table drug_articles ADD CONSTRAINT FK_articles_drug 
@@ -167,7 +178,7 @@ dbExecute(conn = con, statement = "Alter table drug_articles ADD CONSTRAINT FK_a
 
 #store drug books in db
 dbWriteTable(conn = con, value = drug_books, name = "drug_books")
-# add foreign key to drug table
+# add foreign key of drug table
 dbExecute(conn = con, statement = "Alter table drug_books
 alter column drug_key varchar(255) NOT NULL;")
 dbExecute(conn = con, statement = "Alter table drug_books ADD CONSTRAINT FK_books_drug 
@@ -175,7 +186,7 @@ dbExecute(conn = con, statement = "Alter table drug_books ADD CONSTRAINT FK_book
 
 #store drug links in db
 dbWriteTable(conn = con, value = drug_links, name = "drug_links")
-# add foreign key to drug table
+# add foreign key of drug table
 dbExecute(conn = con, statement = "Alter table drug_links
 alter column drug_key varchar(255) NOT NULL;")
 dbExecute(conn = con, statement = "Alter table drug_links ADD CONSTRAINT FK_links_drug 
@@ -184,10 +195,18 @@ dbExecute(conn = con, statement = "Alter table drug_links ADD CONSTRAINT FK_link
 #store drug classifications in db
 dbWriteTable(conn = con, value = drug_classfications, name = "drug_classifications",
              field.types = list(classification = "varchar(2961)"))
-# add foreign key to drug table
+# add foreign key of drug table
 dbExecute(conn = con, statement = "Alter table drug_classifications
           alter column drug_key varchar(255) NOT NULL;")
 dbExecute(conn = con, statement = "Alter table drug_classifications ADD CONSTRAINT FK_classifications_drug 
+          FOREIGN KEY (drug_key) REFERENCES drug(primary_key);")
+
+#store drug synonyms in db
+dbWriteTable(conn = con, value = drug_synonyms, name = "drug_synonyms")
+# add foreign key of drug table
+dbExecute(conn = con, statement = "Alter table drug_synonyms
+          alter column drug_key varchar(255) NOT NULL;")
+dbExecute(conn = con, statement = "Alter table drug_synonyms ADD CONSTRAINT FK_synonyms_drug 
           FOREIGN KEY (drug_key) REFERENCES drug(primary_key);")
 
 # disconnect db
