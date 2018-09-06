@@ -2,21 +2,13 @@ library(XML)
 library(purrr)
 library(tibble)
 library(magrittr)
-#library(RODBC)
 library(DBI)
-# drugbank_db <- xmlParse("drugbank_record.xml")
-# xmlToDataFrame(nodes=getNodeSet(drugbank_db,"/drug/drugbank-id[1]"))
+
+# read and parse the xml database
 drugbank_db <- xmlParse("drugbank.xml")
 top <- xmlRoot(drugbank_db)
-# xmlName(top)
-# names(top)
-# names(top[[1]])
-# xmlValue(top[[1]]["drugbank-id"][[3]])
-# xmlValue(top[[1]][["name"]])
-# xmlAttrs(top[[1]])[["type"]]
-# drug_record <- top[[1]]
-# xpathApply(top, "/drugbank/drug/name", xmlValue)
-# xmlToDataFrame(nodes=getNodeSet(drug_record,"/drugbank-id[1]"))
+
+# Extract drug df
 drug_df <- function(rec) {
   tibble(
     primary_key = xmlValue(rec["drugbank-id"][[1]]),
@@ -31,9 +23,9 @@ drug_df <- function(rec) {
     unii = xmlValue(rec[["unii"]]),
     state = xmlValue(rec[["state"]]),
     groups_count = xmlSize(rec[["groups"]]),
-    articles_count = xmlSize(top[[1]][["general-references"]][["articles"]]),
-    books_count = xmlSize(top[[1]][["general-references"]][["textbooks"]]),
-    links_count = xmlSize(top[[1]][["general-references"]][["links"]]),
+    articles_count = xmlSize(rec[["general-references"]][["articles"]]),
+    books_count = xmlSize(rec[["general-references"]][["textbooks"]]),
+    links_count = xmlSize(rec[["general-references"]][["links"]]),
     synthesis_reference = xmlValue(rec[["synthesis-reference"]]),
     indication = xmlValue(rec[["indication"]]),
     pharmacodynamics = xmlValue(rec[["pharmacodynamics"]]),
@@ -77,11 +69,35 @@ drug_df <- function(rec) {
      toxicity = xmlValue(rec[["toxicity"]])
     )
 }
-#max(nchar(a$absorption))
-a <- map_df(xmlChildren(top), ~drug_df(.x))
 
+# Extract drug groups df
+drug_groups_df <- function(rec) {
+    drug_key <- xmlValue(rec["drugbank-id"][[1]])
+    groups <- xmlToDataFrame(rec[["groups"]])
+    if (nrow(groups) > 0) {
+      groups$drug_key <- drug_key
+    } 
+    
+    return(groups)
+}
+
+# Extract drug articles df
+drug_articles_df <- function(rec) {
+  drug_key <- xmlValue(rec["drugbank-id"][[1]])
+  articles <- xmlToDataFrame(rec[["general-references"]][["articles"]])
+  if (nrow(articles) > 0) {
+    articles$drug_key <- drug_key 
+  }
+  return(articles)
+}
+#max(nchar(a$absorption))
+drug <- map_df(xmlChildren(top), ~drug_df(.x))
+drug_groups <- map_df(xmlChildren(top), ~drug_groups_df(.x))
+drug_articles <- map_df(xmlChildren(top), ~drug_articles_df(.x))
+#db connection
 con <- dbConnect(odbc::odbc(), Driver = "SQL Server", Server = "MOHAMMED\\SQL2016", 
                 Database = "drugbank", Trusted_Connection = "True")
+#set column types
 columnTypes <- list(description = "varchar(6349)", mechanism_of_action = "varchar(7189)",
                     pharmacodynamics = "varchar(3179)", indication = "varchar(3165)",
                     absorption = "nvarchar(3579)", route_of_elimination = "varchar(1324)",
@@ -92,9 +108,29 @@ columnTypes <- list(description = "varchar(6349)", mechanism_of_action = "varcha
                     volume_of_distribution = "varchar(1378)",
                     toxicity = "varchar(max)", created = "date", updated = "date")
 
-dbWriteTable(conn = con, value = a, name = "drug", field.types = columnTypes)
+#store drug in db
+dbWriteTable(conn = con, value = drug, name = "drug", field.types = columnTypes)
+# add primary key to drug table
 dbExecute(conn = con, statement = "Alter table drug
 alter column primary_key varchar(255) NOT NULL;")
 dbExecute(conn = con, statement = "Alter table drug add primary key (primary_key);")
 
+#store drug groups in db
+dbWriteTable(conn = con, value = drug_groups, name = "drug_groups")
+# add foreign key to drug table
+dbExecute(conn = con, statement = "Alter table drug_groups
+alter column drug_key varchar(255) NOT NULL;")
+dbExecute(conn = con, statement = "Alter table drug_groups ADD CONSTRAINT FK_groups_drug 
+          FOREIGN KEY (drug_key) REFERENCES drug(primary_key);")
+
+#store drug articles in db
+dbWriteTable(conn = con, value = drug_articles, name = "drug_articles")
+# add foreign key to drug table
+dbExecute(conn = con, statement = "Alter table drug_articles
+alter column drug_key varchar(255) NOT NULL;")
+dbExecute(conn = con, statement = "Alter table drug_articles ADD CONSTRAINT FK_articles_drug 
+          FOREIGN KEY (drug_key) REFERENCES drug(primary_key);")
+
+
+# disconnect db
 dbDisconnect(conn = con)
