@@ -101,11 +101,22 @@ drug_books_df <- function(rec) {
   return(books)
 }
 
+# Extract drug links df
+drug_links_df <- function(rec) {
+  drug_key <- xmlValue(rec["drugbank-id"][[1]])
+  links <- xmlToDataFrame(rec[["general-references"]][["links"]])
+  if (nrow(links) > 0) {
+    links$drug_key <- drug_key 
+  }
+  return(links)
+}
+
 #max(nchar(a$absorption))
 drug <- map_df(xmlChildren(top), ~drug_df(.x))
 drug_groups <- map_df(xmlChildren(top), ~drug_groups_df(.x))
 drug_articles <- map_df(xmlChildren(top), ~drug_articles_df(.x))
 drug_books <- map_df(xmlChildren(top), ~drug_books_df(.x))
+drug_links <- map_df(xmlChildren(top), ~drug_links_df(.x))
 #db connection
 con <- dbConnect(odbc::odbc(), Driver = "SQL Server", Server = "MOHAMMED\\SQL2016", 
                 Database = "drugbank", Trusted_Connection = "True")
@@ -151,6 +162,13 @@ alter column drug_key varchar(255) NOT NULL;")
 dbExecute(conn = con, statement = "Alter table drug_books ADD CONSTRAINT FK_books_drug 
           FOREIGN KEY (drug_key) REFERENCES drug(primary_key);")
 
+#store drug links in db
+dbWriteTable(conn = con, value = drug_links, name = "drug_links")
+# add foreign key to drug table
+dbExecute(conn = con, statement = "Alter table drug_links
+alter column drug_key varchar(255) NOT NULL;")
+dbExecute(conn = con, statement = "Alter table drug_links ADD CONSTRAINT FK_links_drug 
+          FOREIGN KEY (drug_key) REFERENCES drug(primary_key);")
 
 # disconnect db
 dbDisconnect(conn = con)
