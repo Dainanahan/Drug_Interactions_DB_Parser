@@ -66,7 +66,7 @@ drug_df <- function(rec) {
     enzymes_count = xmlSize(rec[["enzymes"]]),
     carriers_count = xmlSize(rec[["carriers"]]),
     transporters_count = xmlSize(rec[["transporters"]]),
-     toxicity = xmlValue(rec[["toxicity"]])
+    toxicity = xmlValue(rec[["toxicity"]])
     )
 }
 
@@ -111,12 +111,23 @@ drug_links_df <- function(rec) {
   return(links)
 }
 
+# Extract drug classfications df
+drug_classfications_df <- function(rec) {
+  drug_key <- xmlValue(rec["drugbank-id"][[1]])
+  classfications <- map_df(rec["classification"], xmlValue)
+  if (nrow(classfications) > 0) {
+    classfications$drug_key <- drug_key 
+  }
+  return(classfications)
+}
 #max(nchar(a$absorption))
-drug <- map_df(xmlChildren(top), ~drug_df(.x))
-drug_groups <- map_df(xmlChildren(top), ~drug_groups_df(.x))
-drug_articles <- map_df(xmlChildren(top), ~drug_articles_df(.x))
-drug_books <- map_df(xmlChildren(top), ~drug_books_df(.x))
-drug_links <- map_df(xmlChildren(top), ~drug_links_df(.x))
+children <- xmlChildren(top)
+drug <- map_df(children, ~drug_df(.x))
+drug_groups <- map_df(children, ~drug_groups_df(.x))
+drug_articles <- map_df(children, ~drug_articles_df(.x))
+drug_books <- map_df(children, ~drug_books_df(.x))
+drug_links <- map_df(children, ~drug_links_df(.x))
+drug_classfications <- map_df(children, ~drug_classfications_df(.x))
 #db connection
 con <- dbConnect(odbc::odbc(), Driver = "SQL Server", Server = "MOHAMMED\\SQL2016", 
                 Database = "drugbank", Trusted_Connection = "True")
@@ -168,6 +179,15 @@ dbWriteTable(conn = con, value = drug_links, name = "drug_links")
 dbExecute(conn = con, statement = "Alter table drug_links
 alter column drug_key varchar(255) NOT NULL;")
 dbExecute(conn = con, statement = "Alter table drug_links ADD CONSTRAINT FK_links_drug 
+          FOREIGN KEY (drug_key) REFERENCES drug(primary_key);")
+
+#store drug classifications in db
+dbWriteTable(conn = con, value = drug_classfications, name = "drug_classifications",
+             field.types = list(classification = "varchar(2961)"))
+# add foreign key to drug table
+dbExecute(conn = con, statement = "Alter table drug_classifications
+          alter column drug_key varchar(255) NOT NULL;")
+dbExecute(conn = con, statement = "Alter table drug_classifications ADD CONSTRAINT FK_classifications_drug 
           FOREIGN KEY (drug_key) REFERENCES drug(primary_key);")
 
 # disconnect db
