@@ -203,6 +203,7 @@ drug_mixture <- map_df(children, ~drug_mixtures_df(.x))
 drug_packagers <- map_df(children, ~drug_sub_df(.x, "packagers"))
 drug_manufacturers <- map_df(children, ~get_manufactures_df(.x))
 drug_prices <- map_df(children, ~get_pricess_df(.x))
+drug_categories <- map_df(children, ~drug_sub_df(.x, "categories"))
 
 #db connection
 con <- dbConnect(odbc::odbc(), Driver = "SQL Server", Server = "MOHAMMED\\SQL2016", 
