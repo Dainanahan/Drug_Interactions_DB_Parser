@@ -150,6 +150,16 @@ drug_mixtures_df <- function(rec) {
   }
   return(mixtures)
 }
+
+# Extract drug packagers df
+drug_sub_df <- function(rec, main_node) {
+  drug_key <- xmlValue(rec["drugbank-id"][[1]])
+  df <- xmlToDataFrame(rec[[main_node]])
+  if (nrow(df) > 0) {
+    df$drug_key <- drug_key 
+  }
+  return(df)
+}
 #max(nchar(a$absorption))
 children <- xmlChildren(top)
 drug <- map_df(children, ~drug_df(.x))
@@ -161,6 +171,7 @@ drug_classfications <- map_df(children, ~drug_classfications_df(.x))
 drug_synonyms <- map_df(children, ~drug_synonyms_df(.x))
 drug_products <- map_df(children, ~drug_products_df(.x))
 drug_mixture <- map_df(children, ~drug_mixtures_df(.x))
+drug_packagers <- map_df(children, ~drug_sub_df(.x, "packagers"))
 #db connection
 con <- dbConnect(odbc::odbc(), Driver = "SQL Server", Server = "MOHAMMED\\SQL2016", 
                 Database = "drugbank", Trusted_Connection = "True")
@@ -247,5 +258,17 @@ dbExecute(conn = con, statement = "Alter table drug_mixtures
 dbExecute(conn = con, statement = "Alter table drug_mixtures ADD CONSTRAINT FK_mixture_drug 
           FOREIGN KEY (drug_key) REFERENCES drug(primary_key);")
 
+save_drug_sub <- function(df, table_name) {
+  #store drug sub_Table in db
+  dbWriteTable(conn = con, value = df, name = table_name)
+  # add foreign key of drug table
+  dbExecute(conn = con, statement = paste("Alter table", table_name,
+          " alter column drug_key varchar(255) NOT NULL;"))
+  dbExecute(conn = con, statement = paste("Alter table", table_name,"ADD CONSTRAINT",
+  paste("FK_", table_name,"_drug", sep = ""),"FOREIGN KEY (drug_key) REFERENCES drug(primary_key);"))
+}
+
+
+save_drug_sub(drug_packagers, "drug_packagers")
 # disconnect db
 dbDisconnect(conn = con)
