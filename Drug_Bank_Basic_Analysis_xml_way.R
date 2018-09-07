@@ -228,6 +228,7 @@ drug_affected_organisms <- map_df(children, ~drug_sub_df(.x, "affected-organisms
 drug_dosages <- map_df(children, ~drug_sub_df(.x, "dosages"))
 drug_atc_codes <- map_df(children, ~get_atc_codes_df(.x))
 drug_ahfs_codes <- map_df(children, ~drug_sub_df(.x, "ahfs-codes"))
+drug_pdb_entries<- map_df(children, ~drug_sub_df(.x, "pdb-entries"))
 #db connection
 con <- dbConnect(odbc::odbc(), Driver = "SQL Server", Server = "MOHAMMED\\SQL2016", 
                 Database = "drugbank", Trusted_Connection = "True")
