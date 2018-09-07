@@ -162,7 +162,7 @@ drug_sub_df <- function(rec, main_node) {
 
 }
 
-# Extract drug anufacturers df
+# Extract drug manufacturers df
 get_manufacturer_Rec <- function(r, drug_key) {
   tibble(
     name = xmlValue(r),
@@ -173,6 +173,20 @@ get_manufacturer_Rec <- function(r, drug_key) {
 }
 get_manufactures_df <- function(rec) {
   return (map_df(xmlChildren(rec[["manufacturers"]]), ~get_manufacturer_Rec(., xmlValue(rec["drugbank-id"][[1]]))))
+}
+
+# Extract drug prices df
+get_price_rec <- function(r, drug_key) {
+  tibble(
+    description = xmlValue(r[["description"]]),
+    currency = xmlGetAttr(r[["cost"]], name="currency"),
+    cost = xmlValue(r[["cost"]]),
+    unit = xmlValue(r[["unit"]]),
+    drug_key = drug_key
+  )
+}
+get_pricess_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["prices"]]), ~get_price_rec(., xmlValue(rec["drugbank-id"][[1]]))))
 }
 
 #max(nchar(a$absorption))
@@ -188,6 +202,7 @@ drug_products <- map_df(children, ~drug_products_df(.x))
 drug_mixture <- map_df(children, ~drug_mixtures_df(.x))
 drug_packagers <- map_df(children, ~drug_sub_df(.x, "packagers"))
 drug_manufacturers <- map_df(children, ~get_manufactures_df(.x))
+drug_prices <- map_df(children, ~get_pricess_df(.x))
 
 #db connection
 con <- dbConnect(odbc::odbc(), Driver = "SQL Server", Server = "MOHAMMED\\SQL2016", 
@@ -287,5 +302,6 @@ save_drug_sub <- function(df, table_name) {
 
 save_drug_sub(drug_packagers, "drug_packagers")
 save_drug_sub(drug_manufacturers, "drug_manufacturers")
+save_drug_sub(drug_prices, "drug_prices")
 # disconnect db
 dbDisconnect(conn = con)
