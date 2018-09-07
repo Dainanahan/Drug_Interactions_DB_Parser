@@ -189,6 +189,26 @@ get_pricess_df <- function(rec) {
   return (map_df(xmlChildren(rec[["prices"]]), ~get_price_rec(., xmlValue(rec["drugbank-id"][[1]]))))
 }
 
+# Extract drug atc-codes df
+get_atc_codes_rec <- function(r, drug_key) {
+  tibble(
+    atc_code = xmlGetAttr(r, name ="code"),
+    level_1 = xmlValue(r[[1]]),
+    code_1 = xmlGetAttr(r[[1]], name ="code"),
+    level_2 = xmlValue(r[[2]]),
+    code_2 = xmlGetAttr(r[[2]], name ="code"),
+    level_3 = xmlValue(r[[3]]),
+    code_3 = xmlGetAttr(r[[3]], name ="code"),
+    level_4 = xmlValue(r[[4]]),
+    code_4 = xmlGetAttr(r[[4]], name ="code"),
+    drug_key = drug_key
+  )
+}
+get_atc_codes_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["atc-codes"]]), 
+                 ~get_atc_codes_rec(.x,
+                                    xmlValue(rec["drugbank-id"][[1]]))))
+}
 #max(nchar(a$absorption))
 children <- xmlChildren(top)
 drug <- map_df(children, ~drug_df(.x))
@@ -206,6 +226,7 @@ drug_prices <- map_df(children, ~get_pricess_df(.x))
 drug_categories <- map_df(children, ~drug_sub_df(.x, "categories"))
 drug_affected_organisms <- map_df(children, ~drug_sub_df(.x, "affected-organisms"))
 drug_dosages <- map_df(children, ~drug_sub_df(.x, "dosages"))
+drug_atc_codes <- map_df(children, ~get_atc_codes_df(.x))
 
 #db connection
 con <- dbConnect(odbc::odbc(), Driver = "SQL Server", Server = "MOHAMMED\\SQL2016", 
@@ -308,5 +329,6 @@ save_drug_sub(drug_manufacturers, "drug_manufacturers")
 save_drug_sub(drug_prices, "drug_prices")
 save_drug_sub(drug_affected_organisms, "drug_affected_organisms")
 save_drug_sub(drug_dosages, "drug_dosages")
+save_drug_sub(drug_atc_codes, "drug_atc_codes")
 # disconnect db
 dbDisconnect(conn = con)
