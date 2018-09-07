@@ -154,12 +154,27 @@ drug_mixtures_df <- function(rec) {
 # Extract drug packagers df
 drug_sub_df <- function(rec, main_node) {
   drug_key <- xmlValue(rec["drugbank-id"][[1]])
-  df <- xmlToDataFrame(rec[[main_node]])
+    df <- xmlToDataFrame(rec[[main_node]])
   if (nrow(df) > 0) {
     df$drug_key <- drug_key 
   }
   return(df)
+
 }
+
+# Extract drug anufacturers df
+get_manufacturer_Rec <- function(r, drug_key) {
+  tibble(
+    name = xmlValue(r),
+    url = xmlGetAttr(r, name="url"),
+    generic = xmlGetAttr(r, name="generic"),
+    drug_key = drug_key
+  )
+}
+get_manufactures_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["manufacturers"]]), ~get_manufacturer_Rec(., xmlValue(rec["drugbank-id"][[1]]))))
+}
+
 #max(nchar(a$absorption))
 children <- xmlChildren(top)
 drug <- map_df(children, ~drug_df(.x))
@@ -172,6 +187,8 @@ drug_synonyms <- map_df(children, ~drug_synonyms_df(.x))
 drug_products <- map_df(children, ~drug_products_df(.x))
 drug_mixture <- map_df(children, ~drug_mixtures_df(.x))
 drug_packagers <- map_df(children, ~drug_sub_df(.x, "packagers"))
+drug_manufacturers <- map_df(children, ~get_manufactures_df(.x))
+
 #db connection
 con <- dbConnect(odbc::odbc(), Driver = "SQL Server", Server = "MOHAMMED\\SQL2016", 
                 Database = "drugbank", Trusted_Connection = "True")
@@ -268,7 +285,7 @@ save_drug_sub <- function(df, table_name) {
   paste("FK_", table_name,"_drug", sep = ""),"FOREIGN KEY (drug_key) REFERENCES drug(primary_key);"))
 }
 
-
 save_drug_sub(drug_packagers, "drug_packagers")
+save_drug_sub(drug_manufacturers, "drug_manufacturers")
 # disconnect db
 dbDisconnect(conn = con)
