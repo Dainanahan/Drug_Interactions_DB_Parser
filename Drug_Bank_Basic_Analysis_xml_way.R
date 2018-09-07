@@ -229,6 +229,7 @@ drug_dosages <- map_df(children, ~drug_sub_df(.x, "dosages"))
 drug_atc_codes <- map_df(children, ~get_atc_codes_df(.x))
 drug_ahfs_codes <- map_df(children, ~drug_sub_df(.x, "ahfs-codes"))
 drug_pdb_entries<- map_df(children, ~drug_sub_df(.x, "pdb-entries"))
+drug_patents<- map_df(children, ~drug_sub_df(.x, "patents"))
 #db connection
 con <- dbConnect(odbc::odbc(), Driver = "SQL Server", Server = "MOHAMMED\\SQL2016", 
                 Database = "drugbank", Trusted_Connection = "True")
@@ -332,5 +333,7 @@ save_drug_sub(drug_affected_organisms, "drug_affected_organisms")
 save_drug_sub(drug_dosages, "drug_dosages")
 save_drug_sub(drug_atc_codes, "drug_atc_codes")
 save_drug_sub(drug_ahfs_codes, "drug_ahfs_codes")
+save_drug_sub(drug_pdb_entries, "drug_pdb_entries")
+save_drug_sub(drug_patents, "drug_patents")
 # disconnect db
 dbDisconnect(conn = con)
