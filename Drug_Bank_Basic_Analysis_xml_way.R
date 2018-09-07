@@ -209,6 +209,35 @@ get_atc_codes_df <- function(rec) {
                  ~get_atc_codes_rec(.x,
                                     xmlValue(rec["drugbank-id"][[1]]))))
 }
+
+# Extract drug pathways drugs df
+get_pathway_drugs_rec <- function(r) {
+  smpdb_id = xmlValue(r[["smpdb-id"]])
+  drugs <- xmlToDataFrame(r[["drugs"]])
+  drugs$smpdb_id <- smpdb_id
+  return(drugs)
+}
+
+get_pathways_drugs_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["pathways"]]), 
+                 ~get_pathway_drugs_rec(.x)))
+}
+
+# Extract drug pathways enzymes df
+get_pathway_enzymes_rec <- function(r) {
+  smpdb_id = xmlValue(r[["smpdb-id"]])
+  enzymes <- xmlToDataFrame(r[["enzymes"]])
+  if (nrow(enzymes) > 0) {
+    enzymes$smpdb_id <- smpdb_id
+  }
+  
+  return(enzymes)
+}
+
+get_pathways_enzymes_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["pathways"]]), 
+                 ~get_pathway_enzymes_rec(.x)))
+}
 #max(nchar(a$absorption))
 children <- xmlChildren(top)
 drug <- map_df(children, ~drug_df(.x))
@@ -235,7 +264,10 @@ drug_drug_interactions<- map_df(children, ~drug_sub_df(.x, "drug-interactions"))
 drug_sequences<- map_df(children, ~drug_sub_df(.x, "sequences"))
 drug_experimental_properties<- map_df(children, ~drug_sub_df(.x, "experimental-properties"))
 drug_external_identifiers<- map_df(children, ~drug_sub_df(.x, "external-identifiers"))
-drug_external_links<- map_df(children, ~drug_sub_df(.x, "external-links"))
+drug_external_links <- map_df(children, ~drug_sub_df(.x, "external-links"))
+drug_pathway <- map_df(children, ~get_pathways_df(.x))
+drug_pathway_drugs <- map_df(children, ~get_pathways_drugs_df(.x))
+drug_pathway_enzymes <- map_df(children, ~get_pathways_enzymes_df(.x))
 #db connection
 con <- dbConnect(odbc::odbc(), Driver = "SQL Server", Server = "MOHAMMED\\SQL2016", 
                 Database = "drugbank", Trusted_Connection = "True")
@@ -322,14 +354,18 @@ dbExecute(conn = con, statement = "Alter table drug_mixtures
 dbExecute(conn = con, statement = "Alter table drug_mixtures ADD CONSTRAINT FK_mixture_drug 
           FOREIGN KEY (drug_key) REFERENCES drug(primary_key);")
 
-save_drug_sub <- function(df, table_name) {
+save_drug_sub <- function(df, table_name, save_table_only = FALSE,
+                          foreign_key = "drug_key", ref_table = "drug(primary_key)") {
   #store drug sub_Table in db
   dbWriteTable(conn = con, value = df, name = table_name)
-  # add foreign key of drug table
-  dbExecute(conn = con, statement = paste("Alter table", table_name,
-          " alter column drug_key varchar(255) NOT NULL;"))
-  dbExecute(conn = con, statement = paste("Alter table", table_name,"ADD CONSTRAINT",
-  paste("FK_", table_name,"_drug", sep = ""),"FOREIGN KEY (drug_key) REFERENCES drug(primary_key);"))
+  if (!save_table_only) {
+    # add foreign key of drug table
+    dbExecute(conn = con, statement = paste("Alter table", table_name,
+                                            "alter column", foreign_key, "varchar(255) NOT NULL;"))
+    dbExecute(conn = con, statement = paste("Alter table", table_name,"ADD CONSTRAINT",
+                                            paste("FK_", table_name,"_drug", sep = ""),
+                                            paste("FOREIGN KEY (", foreign_key,") REFERENCES", ref_table,";"))) 
+  }
 }
 
 save_drug_sub(drug_packagers, "drug_packagers")
@@ -347,5 +383,8 @@ save_drug_sub(drug_sequences, "drug_sequences")
 save_drug_sub(drug_experimental_properties, "drug_experimental_properties")
 save_drug_sub(drug_external_identifiers, "drug_external_identifiers")
 save_drug_sub(drug_external_links, "drug_external_links")
+save_drug_sub(drug_pathway, "drug_pathways")
+save_drug_sub(drug_pathway_drugs, "drug_pathway_drugs", save_table_only = TRUE)
+save_drug_sub(drug_pathway_enzymes, "drug_pathway_enzymes", save_table_only = TRUE)
 # disconnect db
 dbDisconnect(conn = con)
