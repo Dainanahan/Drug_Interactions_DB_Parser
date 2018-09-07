@@ -205,6 +205,7 @@ drug_manufacturers <- map_df(children, ~get_manufactures_df(.x))
 drug_prices <- map_df(children, ~get_pricess_df(.x))
 drug_categories <- map_df(children, ~drug_sub_df(.x, "categories"))
 drug_affected_organisms <- map_df(children, ~drug_sub_df(.x, "affected-organisms"))
+drug_dosages <- map_df(children, ~drug_sub_df(.x, "dosages"))
 
 #db connection
 con <- dbConnect(odbc::odbc(), Driver = "SQL Server", Server = "MOHAMMED\\SQL2016", 
@@ -306,5 +307,6 @@ save_drug_sub(drug_packagers, "drug_packagers")
 save_drug_sub(drug_manufacturers, "drug_manufacturers")
 save_drug_sub(drug_prices, "drug_prices")
 save_drug_sub(drug_affected_organisms, "drug_affected_organisms")
+save_drug_sub(drug_dosages, "drug_dosages")
 # disconnect db
 dbDisconnect(conn = con)
