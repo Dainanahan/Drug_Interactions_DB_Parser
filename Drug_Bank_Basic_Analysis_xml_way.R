@@ -67,18 +67,18 @@ drug_df <- function(rec) {
     carriers_count = xmlSize(rec[["carriers"]]),
     transporters_count = xmlSize(rec[["transporters"]]),
     toxicity = xmlValue(rec[["toxicity"]])
-    )
+  )
 }
 
 # Extract drug groups df
 drug_groups_df <- function(rec) {
-    drug_key <- xmlValue(rec["drugbank-id"][[1]])
-    groups <- xmlToDataFrame(rec[["groups"]])
-    if (nrow(groups) > 0) {
-      groups$drug_key <- drug_key
-    } 
-    
-    return(groups)
+  drug_key <- xmlValue(rec["drugbank-id"][[1]])
+  groups <- xmlToDataFrame(rec[["groups"]])
+  if (nrow(groups) > 0) {
+    groups$drug_key <- drug_key
+  } 
+  
+  return(groups)
 }
 
 # Extract drug articles df
@@ -154,12 +154,12 @@ drug_mixtures_df <- function(rec) {
 # Extract drug packagers df
 drug_sub_df <- function(rec, main_node) {
   drug_key <- xmlValue(rec["drugbank-id"][[1]])
-    df <- xmlToDataFrame(rec[[main_node]])
+  df <- xmlToDataFrame(rec[[main_node]])
   if (nrow(df) > 0) {
     df$drug_key <- drug_key 
   }
   return(df)
-
+  
 }
 
 # Extract drug manufacturers df
@@ -210,6 +210,20 @@ get_atc_codes_df <- function(rec) {
                                     xmlValue(rec["drugbank-id"][[1]]))))
 }
 
+# Extract drug pathways df
+get_pathway_rec <- function(r, drug_key) {
+  tibble(smpdb_id = xmlValue(r[["smpdb-id"]]),
+         name = xmlValue(r[["name"]]),
+         category = xmlValue(r[["category"]]),
+         drug_key = drug_key)
+}
+
+get_pathways_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["pathways"]]), 
+                 ~get_pathway_rec(.x,
+                                  xmlValue(rec["drugbank-id"][[1]]))))
+}
+
 # Extract drug pathways drugs df
 get_pathway_drugs_rec <- function(r) {
   smpdb_id = xmlValue(r[["smpdb-id"]])
@@ -238,6 +252,25 @@ get_pathways_enzymes_df <- function(rec) {
   return (map_df(xmlChildren(rec[["pathways"]]), 
                  ~get_pathway_enzymes_rec(.x)))
 }
+
+# Extract drug enzymes df
+get_enzyme_rec <- function(r, drug_key) {
+  tibble(id = xmlValue(r[["id"]]),
+         name = xmlValue(r[["name"]]),
+         organism = xmlValue(r[["organism"]]),
+         known_action = xmlValue(r[["known-action"]]),
+         inhibition_strength = xmlValue(r[["inhibition-strength"]]),
+         induction_strength = xmlValue(r[["induction-strength"]]),
+         position = xmlGetAttr(rec, name = "position"),
+         drug_key = drug_key)
+}
+
+get_enzymes_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["enzymes"]]), 
+                 ~get_enzyme_rec(.x,
+                                  xmlValue(rec["drugbank-id"][[1]]))))
+}
+
 #max(nchar(a$absorption))
 children <- xmlChildren(top)
 drug <- map_df(children, ~drug_df(.x))
@@ -268,9 +301,13 @@ drug_external_links <- map_df(children, ~drug_sub_df(.x, "external-links"))
 drug_pathway <- map_df(children, ~get_pathways_df(.x))
 drug_pathway_drugs <- map_df(children, ~get_pathways_drugs_df(.x))
 drug_pathway_enzymes <- map_df(children, ~get_pathways_enzymes_df(.x))
+#drug_reactions <- map_df(children, ~drug_sub_df(.x, "reactions"))
+drug_snp_effects <- map_df(children, ~drug_sub_df(.x, "snp-effects"))
+drug_snp_adverse_drug_reactions <- map_df(children, ~drug_sub_df(.x, "snp-adverse-drug-reactions"))
+
 #db connection
 con <- dbConnect(odbc::odbc(), Driver = "SQL Server", Server = "MOHAMMED\\SQL2016", 
-                Database = "drugbank", Trusted_Connection = "True")
+                 Database = "drugbank", Trusted_Connection = "True")
 #set column types
 columnTypes <- list(description = "varchar(6349)", mechanism_of_action = "varchar(7189)",
                     pharmacodynamics = "varchar(3179)", indication = "varchar(3165)",
@@ -286,14 +323,14 @@ columnTypes <- list(description = "varchar(6349)", mechanism_of_action = "varcha
 dbWriteTable(conn = con, value = drug, name = "drug", field.types = columnTypes)
 # add primary key of drug table
 dbExecute(conn = con, statement = "Alter table drug
-alter column primary_key varchar(255) NOT NULL;")
+          alter column primary_key varchar(255) NOT NULL;")
 dbExecute(conn = con, statement = "Alter table drug add primary key (primary_key);")
 
 #store drug groups in db
 dbWriteTable(conn = con, value = drug_groups, name = "drug_groups")
 # add foreign key of drug table
 dbExecute(conn = con, statement = "Alter table drug_groups
-alter column drug_key varchar(255) NOT NULL;")
+          alter column drug_key varchar(255) NOT NULL;")
 dbExecute(conn = con, statement = "Alter table drug_groups ADD CONSTRAINT FK_groups_drug 
           FOREIGN KEY (drug_key) REFERENCES drug(primary_key);")
 
@@ -301,7 +338,7 @@ dbExecute(conn = con, statement = "Alter table drug_groups ADD CONSTRAINT FK_gro
 dbWriteTable(conn = con, value = drug_articles, name = "drug_articles")
 # add foreign key of drug table
 dbExecute(conn = con, statement = "Alter table drug_articles
-alter column drug_key varchar(255) NOT NULL;")
+          alter column drug_key varchar(255) NOT NULL;")
 dbExecute(conn = con, statement = "Alter table drug_articles ADD CONSTRAINT FK_articles_drug 
           FOREIGN KEY (drug_key) REFERENCES drug(primary_key);")
 
@@ -309,7 +346,7 @@ dbExecute(conn = con, statement = "Alter table drug_articles ADD CONSTRAINT FK_a
 dbWriteTable(conn = con, value = drug_books, name = "drug_books")
 # add foreign key of drug table
 dbExecute(conn = con, statement = "Alter table drug_books
-alter column drug_key varchar(255) NOT NULL;")
+          alter column drug_key varchar(255) NOT NULL;")
 dbExecute(conn = con, statement = "Alter table drug_books ADD CONSTRAINT FK_books_drug 
           FOREIGN KEY (drug_key) REFERENCES drug(primary_key);")
 
@@ -317,7 +354,7 @@ dbExecute(conn = con, statement = "Alter table drug_books ADD CONSTRAINT FK_book
 dbWriteTable(conn = con, value = drug_links, name = "drug_links")
 # add foreign key of drug table
 dbExecute(conn = con, statement = "Alter table drug_links
-alter column drug_key varchar(255) NOT NULL;")
+          alter column drug_key varchar(255) NOT NULL;")
 dbExecute(conn = con, statement = "Alter table drug_links ADD CONSTRAINT FK_links_drug 
           FOREIGN KEY (drug_key) REFERENCES drug(primary_key);")
 
@@ -386,5 +423,7 @@ save_drug_sub(drug_external_links, "drug_external_links")
 save_drug_sub(drug_pathway, "drug_pathways")
 save_drug_sub(drug_pathway_drugs, "drug_pathway_drugs", save_table_only = TRUE)
 save_drug_sub(drug_pathway_enzymes, "drug_pathway_enzymes", save_table_only = TRUE)
+save_drug_sub(drug_snp_adverse_drug_reactions, "drug_snp_adverse_drug_reactions")
+save_drug_sub(drug_snp_effects, "drug_snp_effects")
 # disconnect db
 dbDisconnect(conn = con)
