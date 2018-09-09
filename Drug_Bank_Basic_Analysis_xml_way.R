@@ -261,7 +261,7 @@ get_enzyme_rec <- function(r, drug_key) {
          known_action = xmlValue(r[["known-action"]]),
          inhibition_strength = xmlValue(r[["inhibition-strength"]]),
          induction_strength = xmlValue(r[["induction-strength"]]),
-         position = xmlGetAttr(rec, name = "position"),
+         position = ifelse(is.null(xmlGetAttr(r, name = "position")), NA, xmlGetAttr(r, name = "position")),
          drug_key = drug_key)
 }
 
@@ -271,6 +271,140 @@ get_enzymes_df <- function(rec) {
                                   xmlValue(rec["drugbank-id"][[1]]))))
 }
 
+# Extract drug enzymes actions df
+get_enzymes_actions_rec <- function(r) {
+  enzyme_id = xmlValue(r[["id"]])
+  actions <- xmlToDataFrame(r[["actions"]])
+  if (nrow(actions) > 0) {
+    actions$enzyme_id <- enzyme_id
+  }
+  
+  return(actions)
+}
+
+get_enzymes_actions_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["enzymes"]]), 
+                 ~get_enzymes_actions_rec(.x)))
+}
+
+
+# Extract drug enzymes articles df
+get_enzymes_articles_rec <- function(r) {
+  enzyme_id = xmlValue(r[["id"]])
+  articles <- xmlToDataFrame(r[["references"]][["articles"]])
+  if (nrow(articles) > 0) {
+    articles$enzyme_id <- enzyme_id
+  }
+  
+  return(articles)
+}
+
+get_enzymes_articles_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["enzymes"]]), 
+                 ~get_enzymes_articles_rec(.x)))
+}
+
+# Extract drug enzymes textbooks df
+get_enzymes_textbooks_rec <- function(r) {
+  enzyme_id = xmlValue(r[["id"]])
+  textbooks <- xmlToDataFrame(r[["references"]][["textbooks"]])
+  if (nrow(textbooks) > 0) {
+    textbooks$enzyme_id <- enzyme_id
+  }
+  
+  return(textbooks)
+}
+
+get_enzymes_textbooks_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["enzymes"]]), 
+                 ~get_enzymes_textbooks_rec(.x)))
+}
+
+# Extract drug enzymes links df
+get_enzymes_links_rec <- function(r) {
+  enzyme_id = xmlValue(r[["id"]])
+  links <- xmlToDataFrame(r[["references"]][["links"]])
+  if (nrow(links) > 0) {
+    links$enzyme_id <- enzyme_id
+  }
+  
+  return(links)
+}
+
+get_enzymes_links_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["enzymes"]]), 
+                 ~get_enzymes_links_rec(.x)))
+}
+
+# Extract drug enzymes polypeptide df
+get_enzyme_polypeptide_rec <- function(r) {
+  enzyme_id = xmlValue(r[["id"]])
+  p <- r[["polypeptide"]]
+  if (!is.null(p)) {
+    tibble(id = ifelse(is.null(xmlGetAttr(p, name = "id")), NA, xmlGetAttr(p, name = "id")),
+           source  = ifelse(is.null(xmlGetAttr(p, name = "source")), NA, xmlGetAttr(p, name = "source")),
+           name = xmlValue(p[["name"]]),
+           general_function = xmlValue(p[["general-function"]]),
+           specific_function = xmlValue(p[["specific-function"]]),
+           gene_name = xmlValue(p[["gene-name"]]),
+           locus = xmlValue(p[["locus"]]),
+           cellular_location = xmlValue(p[["cellular-location"]]),
+           transmembrane_regions = xmlValue(p[["transmembrane-regions"]]),
+           signal_regions = xmlValue(p[["signal-regions"]]),
+           theoretical_pi = xmlValue(p[["theoretical-pi"]]),
+           molecular_weight = xmlValue(p[["molecular-weight"]]),
+           chromosome_location = xmlValue(p[["chromosome_location"]]),
+           organism = xmlValue(p[["organism"]]),
+           organism_ncbi_taxonomy_id = xmlGetAttr(p[["organism"]], name = "ncbi-taxonomy-id"),
+           amino_acid_sequence = xmlValue(p[["amino-acid-sequence"]]),
+           amindo_acid_format = xmlGetAttr(p[["amino-acid-sequence"]], name = "format"),
+           gene_sequence = xmlValue(p[["gene-sequence"]]),
+           gene_format = xmlGetAttr(p[["gene-sequence"]], name = "format"),
+           enzyme_id = enzyme_id)
+  }
+}
+
+get_enzymes_polypeptide_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["enzymes"]]), 
+                 ~get_enzyme_polypeptide_rec(.x)))
+}
+
+# Extract drug enzymes polypeptide_external_identifiers df
+get_enzymes_polypeptide_external_identifiers <- function(r) {
+  p <- r[["polypeptide"]]
+  if (!is.null(p)) {
+    polypeptide_id <- ifelse(is.null(xmlGetAttr(p, name = "id")), NA, xmlGetAttr(p, name = "id"))
+    polypeptide_external_identifiers <- xmlToDataFrame(p[["external-identifiers"]])
+    polypeptide_external_identifiers$polypeptide_id <- polypeptide_id
+    return(polypeptide_external_identifiers)
+  }
+}
+
+get_enzymes_polypeptide_external_identifiers_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["enzymes"]]), 
+                 ~get_enzymes_polypeptide_external_identifiers(.x)))
+}
+
+
+# Extract drug enzymes polypeptid synonyms df
+get_enzymes_polypeptide_synonyms <- function(r) {
+  p <- r[["polypeptide"]]
+  if (!is.null(p)) {
+    polypeptide_id <- ifelse(is.null(xmlGetAttr(p, name = "id")), NA, xmlGetAttr(p, name = "id"))
+    polypeptide_synonyms <- p[["synonyms"]]
+    if (xmlSize(polypeptide_synonyms) > 0) {
+      tibble(
+        synonyms =  paste(xmlApply(polypeptide_synonyms, xmlValue), collapse = ","),
+        polypeptide_id = polypeptide_id 
+      )
+    }
+  }
+}
+
+get_enzymes_polypeptide_synonyms_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["enzymes"]]), 
+                 ~get_enzymes_polypeptide_synonyms(.x)))
+}
 #max(nchar(a$absorption))
 children <- xmlChildren(top)
 drug <- map_df(children, ~drug_df(.x))
@@ -304,7 +438,17 @@ drug_pathway_enzymes <- map_df(children, ~get_pathways_enzymes_df(.x))
 #drug_reactions <- map_df(children, ~drug_sub_df(.x, "reactions"))
 drug_snp_effects <- map_df(children, ~drug_sub_df(.x, "snp-effects"))
 drug_snp_adverse_drug_reactions <- map_df(children, ~drug_sub_df(.x, "snp-adverse-drug-reactions"))
+drug_enzymes <- map_df(children, ~get_enzymes_df(.x))
+drug_enzymes_actions <- map_df(children, ~get_enzymes_actions_df(.x))
+drug_enzymes_articles <- map_df(children, ~get_enzymes_articles_df(.x))
+drug_enzymes_textbooks <- map_df(children, ~get_enzymes_textbooks_df(.x))
+drug_enzymes_links <- map_df(children, ~get_enzymes_links_df(.x))
+drug_enzymes_polypeptides <- map_df(children, ~get_enzymes_polypeptide_df(.x))
+drug_enzymes_polypeptide_external_identifiers <- map_df(children, 
+                                                        ~get_enzymes_polypeptide_external_identifiers_df(.x))
 
+drug_enzymes_polypeptide_synonyms <- map_df(children, 
+                                                        ~get_enzymes_polypeptide_synonyms_df(.x))
 #db connection
 con <- dbConnect(odbc::odbc(), Driver = "SQL Server", Server = "MOHAMMED\\SQL2016", 
                  Database = "drugbank", Trusted_Connection = "True")
@@ -391,10 +535,10 @@ dbExecute(conn = con, statement = "Alter table drug_mixtures
 dbExecute(conn = con, statement = "Alter table drug_mixtures ADD CONSTRAINT FK_mixture_drug 
           FOREIGN KEY (drug_key) REFERENCES drug(primary_key);")
 
-save_drug_sub <- function(df, table_name, save_table_only = FALSE,
+save_drug_sub <- function(df, table_name, save_table_only = FALSE, field.types = NULL,
                           foreign_key = "drug_key", ref_table = "drug(primary_key)") {
   #store drug sub_Table in db
-  dbWriteTable(conn = con, value = df, name = table_name)
+  dbWriteTable(conn = con, value = df, name = table_name, field.types = field.types)
   if (!save_table_only) {
     # add foreign key of drug table
     dbExecute(conn = con, statement = paste("Alter table", table_name,
@@ -425,5 +569,26 @@ save_drug_sub(drug_pathway_drugs, "drug_pathway_drugs", save_table_only = TRUE)
 save_drug_sub(drug_pathway_enzymes, "drug_pathway_enzymes", save_table_only = TRUE)
 save_drug_sub(drug_snp_adverse_drug_reactions, "drug_snp_adverse_drug_reactions")
 save_drug_sub(drug_snp_effects, "drug_snp_effects")
+save_drug_sub(drug_enzymes, "drug_enzymes")
+save_drug_sub(drug_enzymes_actions, "drug_enzymes_actions", save_table_only = TRUE)
+save_drug_sub(drug_enzymes_articles, "drug_enzymes_articles", save_table_only = TRUE)
+save_drug_sub(drug_enzymes_links, "drug_enzymes_links", save_table_only = TRUE)
+save_drug_sub(drug_enzymes_textbooks, "drug_enzymes_textbooks", save_table_only = TRUE)
+save_drug_sub(drug_enzymes_polypeptides, "drug_enzymes_polypeptides", save_table_only = TRUE,
+              field.types = list(general_function =
+                                   paste("varchar(",
+                                         max(nchar(drug_enzymes_polypeptides$general_function)), ")", sep = ""),
+                                 specific_function =
+                                   paste("varchar(",
+                                         max(nchar(drug_enzymes_polypeptides$specific_function)), ")", sep = ""),
+                                 amino_acid_sequence =
+                                   paste("varchar(",
+                                         max(nchar(drug_enzymes_polypeptides$amino_acid_sequence)), ")", sep = ""),
+                                 gene_sequence =
+                                   paste("varchar(",
+                                         max(nchar(drug_enzymes_polypeptides$gene_sequence)), ")", sep = "")))
+save_drug_sub(drug_enzymes_polypeptide_external_identifiers, "drug_enzymes_polypeptides_external_identifiers",
+              save_table_only = TRUE)
+save_drug_sub(drug_enzymes_polypeptide_synonyms, "drug_enzymes_polypeptides_synonyms", save_table_only = TRUE)
 # disconnect db
 dbDisconnect(conn = con)
