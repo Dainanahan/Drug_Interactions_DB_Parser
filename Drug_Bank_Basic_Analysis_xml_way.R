@@ -405,6 +405,45 @@ get_enzymes_polypeptide_synonyms_df <- function(rec) {
   return (map_df(xmlChildren(rec[["enzymes"]]), 
                  ~get_enzymes_polypeptide_synonyms(.x)))
 }
+
+# Extract drug enzymes polypeptide pfams df
+get_enzymes_polypeptide_pfams <- function(r) {
+  p <- r[["polypeptide"]]
+  if (!is.null(p)) {
+    polypeptide_id <- ifelse(is.null(xmlGetAttr(p, name = "id")), NA, xmlGetAttr(p, name = "id"))
+    firstCell <- xmlValue(xmlChildren(p[["pfams"]])[[1]])
+    if(firstCell != "\n    " ) {
+      polypeptide_pfams<- xmlToDataFrame(xmlChildren(p[["pfams"]]))
+      polypeptide_pfams$polypeptide_id <- polypeptide_id
+      return(polypeptide_pfams)
+    }
+  }
+}
+
+get_enzymes_polypeptide_pfams_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["enzymes"]]), 
+                 ~get_enzymes_polypeptide_pfams(.x)))
+}
+
+
+# Extract drug enzymes polypeptide go-classifiers df
+get_enzymes_polypeptide_go_classifiers <- function(r) {
+  p <- r[["polypeptide"]]
+  if (!is.null(p)) {
+    polypeptide_id <- ifelse(is.null(xmlGetAttr(p, name = "id")), NA, xmlGetAttr(p, name = "id"))
+    firstCell <- xmlValue(xmlChildren(p[["pfams"]])[[1]])
+    if(firstCell != "\n    " ) {
+      polypeptide_go_classifiers <- xmlToDataFrame(xmlChildren(p[["go-classifiers"]]))
+      polypeptide_go_classifiers$polypeptide_id <- polypeptide_id
+      return(polypeptide_go_classifiers)
+    }
+  }
+}
+
+get_enzymes_polypeptide_go_classifiers_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["enzymes"]]), 
+                 ~get_enzymes_polypeptide_go_classifiers(.x)))
+}
 #max(nchar(a$absorption))
 children <- xmlChildren(top)
 drug <- map_df(children, ~drug_df(.x))
@@ -449,6 +488,10 @@ drug_enzymes_polypeptide_external_identifiers <- map_df(children,
 
 drug_enzymes_polypeptide_synonyms <- map_df(children, 
                                                         ~get_enzymes_polypeptide_synonyms_df(.x))
+drug_enzymes_polypeptide_pfams <-  map_df(children, 
+                                          ~get_enzymes_polypeptide_pfams_df(.x))
+drug_enzymes_polypeptide_go_classifiers <-  map_df(children, 
+                                            ~get_enzymes_polypeptide_go_classifiers_df(.x))
 #db connection
 con <- dbConnect(odbc::odbc(), Driver = "SQL Server", Server = "MOHAMMED\\SQL2016", 
                  Database = "drugbank", Trusted_Connection = "True")
@@ -590,5 +633,8 @@ save_drug_sub(drug_enzymes_polypeptides, "drug_enzymes_polypeptides", save_table
 save_drug_sub(drug_enzymes_polypeptide_external_identifiers, "drug_enzymes_polypeptides_external_identifiers",
               save_table_only = TRUE)
 save_drug_sub(drug_enzymes_polypeptide_synonyms, "drug_enzymes_polypeptides_synonyms", save_table_only = TRUE)
+save_drug_sub(drug_enzymes_polypeptide_pfams, "drug_enzymes_polypeptides_pfams", save_table_only = TRUE)
+save_drug_sub(drug_enzymes_polypeptide_go_classifiers, "drug_enzymes_polypeptides_go_classifiers",
+              save_table_only = TRUE)
 # disconnect db
 dbDisconnect(conn = con)
