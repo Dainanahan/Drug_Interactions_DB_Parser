@@ -444,6 +444,34 @@ get_enzymes_polypeptide_go_classifiers_df <- function(rec) {
   return (map_df(xmlChildren(rec[["enzymes"]]), 
                  ~get_enzymes_polypeptide_go_classifiers(.x)))
 }
+
+# Extract drug reactions df
+get_reactions_Rec <- function(r, drug_key) {
+  tibble(
+    sequence = xmlValue(r[["sequence"]]),
+    left_drugbank_id = xmlValue(r[["left-element"]][["drugbank-id"]]),
+    left_drugbank_name = xmlValue(r[["left-element"]][["name"]]),
+    right_drugbank_id = xmlValue(r[["right-element"]][["drugbank-id"]]),
+    right_drugbank_name = xmlValue(r[["right-element"]][["name"]]),
+    drug_key = drug_key
+  )
+}
+get_reactions_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["reactions"]]), ~get_reactions_Rec(., xmlValue(rec["drugbank-id"][[1]]))))
+}
+
+# Extract drug reactions enzymes df
+get_reactions_enzymes_rec <- function(r, drug_key) {
+  enzymes <- xmlToDataFrame(r[["enzymes"]])
+  if (nrow(enzymes) > 0) {
+    enzymes$drug_key = drug_key
+  }
+  return (enzymes)
+  
+}
+get_reactions_enzymes_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["reactions"]]), ~get_reactions_enzymes_rec(., xmlValue(rec["drugbank-id"][[1]]))))
+}
 #max(nchar(a$absorption))
 children <- xmlChildren(top)
 drug <- map_df(children, ~drug_df(.x))
@@ -492,6 +520,8 @@ drug_enzymes_polypeptide_pfams <-  map_df(children,
                                           ~get_enzymes_polypeptide_pfams_df(.x))
 drug_enzymes_polypeptide_go_classifiers <-  map_df(children, 
                                             ~get_enzymes_polypeptide_go_classifiers_df(.x))
+drug_reactions <-  map_df(children, ~get_reactions_df(.x))
+drug_reactions_enzymes <-  map_df(children, ~get_reactions_enzymes_df(.x))
 #db connection
 con <- dbConnect(odbc::odbc(), Driver = "SQL Server", Server = "MOHAMMED\\SQL2016", 
                  Database = "drugbank", Trusted_Connection = "True")
@@ -636,5 +666,7 @@ save_drug_sub(drug_enzymes_polypeptide_synonyms, "drug_enzymes_polypeptides_syno
 save_drug_sub(drug_enzymes_polypeptide_pfams, "drug_enzymes_polypeptides_pfams", save_table_only = TRUE)
 save_drug_sub(drug_enzymes_polypeptide_go_classifiers, "drug_enzymes_polypeptides_go_classifiers",
               save_table_only = TRUE)
+save_drug_sub(drug_reactions, "drug_reactions")
+save_drug_sub(drug_reactions_enzymes, "drug_reactions_enzymes")
 # disconnect db
 dbDisconnect(conn = con)
