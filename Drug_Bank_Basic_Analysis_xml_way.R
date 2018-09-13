@@ -272,11 +272,12 @@ get_enzymes_df <- function(rec) {
 }
 
 # Extract drug enzymes actions df
-get_enzymes_actions_rec <- function(r) {
-  enzyme_id = xmlValue(r[["id"]])
+get_enzymes_actions_rec <- function(r, drug_key) {
+  parentid = xmlValue(r[["id"]])
   actions <- xmlToDataFrame(r[["actions"]])
   if (nrow(actions) > 0) {
-    actions$enzyme_id <- enzyme_id
+    actions$parent_id <- parentid
+    actions$drug_key <- drug_key
   }
   
   return(actions)
@@ -284,7 +285,26 @@ get_enzymes_actions_rec <- function(r) {
 
 get_enzymes_actions_df <- function(rec) {
   return (map_df(xmlChildren(rec[["enzymes"]]), 
-                 ~get_enzymes_actions_rec(.x)))
+                 ~get_enzymes_actions_rec(.x,
+                                          xmlValue(rec["drugbank-id"][[1]]))))
+}
+
+get_targets_actions_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["targets"]]), 
+                 ~get_enzymes_actions_rec(.x,
+                                          xmlValue(rec["drugbank-id"][[1]]))))
+}
+
+get_carriers_actions_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["enzymes"]]), 
+                 ~get_enzymes_actions_rec(.x,
+                                          xmlValue(rec["drugbank-id"][[1]]))))
+}
+
+get_transporters_actions_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["enzymes"]]), 
+                 ~get_enzymes_actions_rec(.x,
+                                          xmlValue(rec["drugbank-id"][[1]]))))
 }
 
 
@@ -538,7 +558,12 @@ drug_pathway_enzymes <- map_df(children, ~get_pathways_enzymes_df(.x))
 drug_snp_effects <- map_df(children, ~drug_sub_df(.x, "snp-effects"))
 drug_snp_adverse_drug_reactions <- map_df(children, ~drug_sub_df(.x, "snp-adverse-drug-reactions"))
 drug_enzymes <- map_df(children, ~get_enzymes_df(.x))
+
 drug_enzymes_actions <- map_df(children, ~get_enzymes_actions_df(.x))
+drug_targets_actions <- map_df(children, ~get_targets_actions_df(.x))
+drug_carriers_actions <- map_df(children, ~get_carriers_actions_df(.x))
+drug_transporters_actions <- map_df(children, ~get_transporters_actions_df(.x))
+
 drug_enzymes_articles <- map_df(children, ~get_enzymes_articles_df(.x))
 drug_enzymes_textbooks <- map_df(children, ~get_enzymes_textbooks_df(.x))
 drug_enzymes_links <- map_df(children, ~get_enzymes_links_df(.x))
@@ -662,8 +687,6 @@ save_drug_sub <- function(df, table_name, save_table_only = FALSE, field.types =
       
     }
     # add foreign key of drug table
-    dbExecute(conn = con, statement = paste("Alter table", table_name,
-                                            "alter column", foreign_key, "varchar(255) NOT NULL;"))
     dbExecute(conn = con, statement = paste("Alter table", table_name,"ADD CONSTRAINT",
                                             paste("FK_", table_name,"_drug", sep = ""),
                                             paste("FOREIGN KEY (", foreign_key,") REFERENCES", ref_table,";"))) 
@@ -721,5 +744,8 @@ save_drug_sub(drug_snp_adverse_drug_reactions, "drug_snp_adverse_drug_reactions"
 save_drug_sub(drug_carriers, "drug_carriers", primary_key = c("id", "drug_key"))
 save_drug_sub(drug_transporters, "drug_transporters", primary_key = c("id", "drug_key"))
 save_drug_sub(drug_targets, "drug_targets", primary_key = c("id", "drug_key"))
+save_drug_sub(drug_carriers_actions, "drug_carriers_actions", save_table_only = TRUE)
+save_drug_sub(drug_transporters_actions, "drug_transporter_actions", save_table_only = TRUE)
+save_drug_sub(drug_targets_actions, "drug_targets_actions", save_table_only = TRUE)
 # disconnect db
 dbDisconnect(conn = con)
