@@ -472,6 +472,39 @@ get_reactions_enzymes_rec <- function(r, drug_key) {
 get_reactions_enzymes_df <- function(rec) {
   return (map_df(xmlChildren(rec[["reactions"]]), ~get_reactions_enzymes_rec(., xmlValue(rec["drugbank-id"][[1]]))))
 }
+
+
+
+# Extract drug carriers df
+get_carrier_rec <- function(r, drug_key) {
+  tibble(id = xmlValue(r[["id"]]),
+         name = xmlValue(r[["name"]]),
+         organism = xmlValue(r[["organism"]]),
+         known_action = xmlValue(r[["known-action"]]),
+         position = ifelse(is.null(xmlGetAttr(r, name = "position")), NA, xmlGetAttr(r, name = "position")),
+         drug_key = drug_key)
+}
+
+get_carriers_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["carriers"]]), 
+                 ~get_carrier_rec(.x,
+                                 xmlValue(rec["drugbank-id"][[1]]))))
+}
+
+
+get_targets_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["targets"]]), 
+                 ~get_carrier_rec(.x,
+                                  xmlValue(rec["drugbank-id"][[1]]))))
+}
+
+
+get_transporters_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["transporters"]]), 
+                 ~get_carrier_rec(.x,
+                                  xmlValue(rec["drugbank-id"][[1]]))))
+}
+
 #max(nchar(a$absorption))
 children <- xmlChildren(top)
 drug <- map_df(children, ~drug_df(.x))
@@ -521,6 +554,11 @@ drug_enzymes_polypeptide_go_classifiers <-  map_df(children,
                                             ~get_enzymes_polypeptide_go_classifiers_df(.x))
 drug_reactions <-  map_df(children, ~get_reactions_df(.x))
 drug_reactions_enzymes <-  map_df(children, ~get_reactions_enzymes_df(.x))
+
+drug_carriers <-  map_df(children, ~get_carriers_df(.x))
+drug_transporters <-  map_df(children, ~get_transporters_df(.x))
+drug_targets <-  map_df(children, ~get_targets_df(.x))
+
 #db connection
 con <- dbConnect(odbc::odbc(), Driver = "SQL Server", Server = "MOHAMMED\\SQL2016", 
                  Database = "drugbank", Trusted_Connection = "True")
@@ -608,10 +646,21 @@ dbExecute(conn = con, statement = "Alter table drug_mixtures ADD CONSTRAINT FK_m
           FOREIGN KEY (drug_key) REFERENCES drug(primary_key);")
 
 save_drug_sub <- function(df, table_name, save_table_only = FALSE, field.types = NULL,
+                          primary_key = NULL,
                           foreign_key = "drug_key", ref_table = "drug(primary_key)") {
   #store drug sub_Table in db
   dbWriteTable(conn = con, value = df, name = table_name, field.types = field.types)
   if (!save_table_only) {
+    # add primary key of drug table
+    if (!is.null(primary_key)) {
+      for (key in primary_key) {
+        dbExecute(conn = con, statement = paste("Alter table", table_name,
+                                                "alter column", key, "varchar(255) NOT NULL;"))
+      }
+      dbExecute(conn = con, statement = paste("Alter table", table_name,
+                                              "add primary key(", paste(primary_key, collapse = ","), ");"))
+      
+    }
     # add foreign key of drug table
     dbExecute(conn = con, statement = paste("Alter table", table_name,
                                             "alter column", foreign_key, "varchar(255) NOT NULL;"))
@@ -669,5 +718,8 @@ save_drug_sub(drug_reactions, "drug_reactions")
 save_drug_sub(drug_reactions_enzymes, "drug_reactions_enzymes")
 save_drug_sub(drug_snp_effects, "drug_snp_effects")
 save_drug_sub(drug_snp_adverse_drug_reactions, "drug_snp_adverse_drug_reactions")
+save_drug_sub(drug_carriers, "drug_carriers", primary_key = c("id", "drug_key"))
+save_drug_sub(drug_transporters, "drug_transporters", primary_key = c("id", "drug_key"))
+save_drug_sub(drug_targets, "drug_targets", primary_key = c("id", "drug_key"))
 # disconnect db
 dbDisconnect(conn = con)
