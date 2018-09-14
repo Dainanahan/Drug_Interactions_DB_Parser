@@ -712,6 +712,12 @@ drug_transporters_polypeptides <- map_df(children, ~get_transporters_polypeptide
 
 drug_enzymes_polypeptide_external_identifiers <- map_df(children, 
                                                         ~get_enzymes_polypeptide_external_identifiers_df(.x))
+drug_targets_polypeptide_external_identifiers <- map_df(children, 
+                                                        ~get_targets_polypeptide_external_identifiers_df(.x))
+drug_carriers_polypeptide_external_identifiers <- map_df(children, 
+                                                        ~get_carriers_polypeptide_external_identifiers_df(.x))
+drug_transporters_polypeptide_external_identifiers <- map_df(children, 
+                                                        ~get_transporters_polypeptide_external_identifiers_df(.x))
 
 drug_enzymes_polypeptide_synonyms <- map_df(children, 
                                                         ~get_enzymes_polypeptide_synonyms_df(.x))
@@ -874,6 +880,12 @@ save_drug_sub(drug_enzymes_polypeptides, "drug_enzymes_polypeptides", save_table
                                    paste("varchar(",
                                          max(nchar(drug_enzymes_polypeptides$gene_sequence)), ")", sep = "")))
 save_drug_sub(drug_enzymes_polypeptide_external_identifiers, "drug_enzymes_polypeptides_external_identifiers",
+              save_table_only = TRUE)
+save_drug_sub(drug_targets_polypeptide_external_identifiers, "drug_targets_polypeptides_external_identifiers",
+              save_table_only = TRUE)
+save_drug_sub(drug_carriers_polypeptide_external_identifiers, "drug_carriers_polypeptides_external_identifiers",
+              save_table_only = TRUE)
+save_drug_sub(drug_transporters_polypeptide_external_identifiers, "drug_transporters_polypeptides_external_identifiers",
               save_table_only = TRUE)
 save_drug_sub(drug_enzymes_polypeptide_synonyms, "drug_enzymes_polypeptides_synonyms", save_table_only = TRUE)
 save_drug_sub(drug_enzymes_polypeptide_pfams, "drug_enzymes_polypeptides_pfams", save_table_only = TRUE)
