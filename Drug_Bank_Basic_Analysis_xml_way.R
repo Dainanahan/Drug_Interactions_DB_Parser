@@ -721,6 +721,13 @@ drug_transporters_polypeptide_external_identifiers <- map_df(children,
 
 drug_enzymes_polypeptide_synonyms <- map_df(children, 
                                                         ~get_enzymes_polypeptide_synonyms_df(.x))
+drug_targets_polypeptide_synonyms <- map_df(children, 
+                                            ~get_targets_polypeptide_synonyms_df(.x))
+drug_carriers_polypeptide_synonyms <- map_df(children, 
+                                            ~get_carriers_polypeptide_synonyms_df(.x))
+drug_transporters_polypeptide_synonyms <- map_df(children, 
+                                            ~get_transporters_polypeptide_synonyms_df(.x))
+
 drug_enzymes_polypeptide_pfams <-  map_df(children, 
                                           ~get_enzymes_polypeptide_pfams_df(.x))
 drug_enzymes_polypeptide_go_classifiers <-  map_df(children, 
@@ -888,6 +895,11 @@ save_drug_sub(drug_carriers_polypeptide_external_identifiers, "drug_carriers_pol
 save_drug_sub(drug_transporters_polypeptide_external_identifiers, "drug_transporters_polypeptides_external_identifiers",
               save_table_only = TRUE)
 save_drug_sub(drug_enzymes_polypeptide_synonyms, "drug_enzymes_polypeptides_synonyms", save_table_only = TRUE)
+save_drug_sub(drug_targets_polypeptide_synonyms, "drug_targets_polypeptides_synonyms", save_table_only = TRUE)
+save_drug_sub(drug_carriers_polypeptide_synonyms, "drug_carriers_polypeptides_synonyms", save_table_only = TRUE)
+save_drug_sub(drug_transporters_polypeptide_synonyms, "drug_transporters_polypeptides_synonyms", 
+              save_table_only = TRUE)
+
 save_drug_sub(drug_enzymes_polypeptide_pfams, "drug_enzymes_polypeptides_pfams", save_table_only = TRUE)
 save_drug_sub(drug_enzymes_polypeptide_go_classifiers, "drug_enzymes_polypeptides_go_classifiers",
               save_table_only = TRUE)
