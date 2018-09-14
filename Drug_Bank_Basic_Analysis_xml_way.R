@@ -308,12 +308,12 @@ get_transporters_actions_df <- function(rec) {
 }
 
 
-# Extract drug enzymes articles df
-get_enzymes_articles_rec <- function(r) {
-  enzyme_id = xmlValue(r[["id"]])
+# Extract drug articles df
+get_articles_rec <- function(r) {
+  parent_id = xmlValue(r[["id"]])
   articles <- xmlToDataFrame(r[["references"]][["articles"]])
   if (nrow(articles) > 0) {
-    articles$enzyme_id <- enzyme_id
+    articles$parent_id <- parent_id
   }
   
   return(articles)
@@ -321,15 +321,30 @@ get_enzymes_articles_rec <- function(r) {
 
 get_enzymes_articles_df <- function(rec) {
   return (map_df(xmlChildren(rec[["enzymes"]]), 
-                 ~get_enzymes_articles_rec(.x)))
+                 ~get_articles_rec(.x)))
 }
 
-# Extract drug enzymes textbooks df
-get_enzymes_textbooks_rec <- function(r) {
-  enzyme_id = xmlValue(r[["id"]])
+get_transporters_articles_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["transporters"]]), 
+                 ~get_articles_rec(.x)))
+}
+
+get_carriers_articles_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["carriers"]]), 
+                 ~get_articles_rec(.x)))
+}
+
+get_targets_articles_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["targets"]]), 
+                 ~get_articles_rec(.x)))
+}
+
+# Extract drug textbooks df
+get_textbooks_rec <- function(r) {
+  parent_id = xmlValue(r[["id"]])
   textbooks <- xmlToDataFrame(r[["references"]][["textbooks"]])
   if (nrow(textbooks) > 0) {
-    textbooks$enzyme_id <- enzyme_id
+    textbooks$parent_id <- parent_id
   }
   
   return(textbooks)
@@ -337,15 +352,33 @@ get_enzymes_textbooks_rec <- function(r) {
 
 get_enzymes_textbooks_df <- function(rec) {
   return (map_df(xmlChildren(rec[["enzymes"]]), 
-                 ~get_enzymes_textbooks_rec(.x)))
+                 ~get_textbooks_rec(.x)))
 }
 
-# Extract drug enzymes links df
-get_enzymes_links_rec <- function(r) {
-  enzyme_id = xmlValue(r[["id"]])
+
+get_transporters_textbooks_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["transporters"]]), 
+                 ~get_textbooks_rec(.x)))
+}
+
+get_carriers_textbooks_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["carriers"]]), 
+                 ~get_textbooks_rec(.x)))
+}
+
+
+
+get_targets_textbooks_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["targets"]]), 
+                 ~get_textbooks_rec(.x)))
+}
+
+# Extract drug links df
+get_links_rec <- function(r) {
+  parent_id = xmlValue(r[["id"]])
   links <- xmlToDataFrame(r[["references"]][["links"]])
   if (nrow(links) > 0) {
-    links$enzyme_id <- enzyme_id
+    links$parent_id <- parent_id
   }
   
   return(links)
@@ -353,12 +386,30 @@ get_enzymes_links_rec <- function(r) {
 
 get_enzymes_links_df <- function(rec) {
   return (map_df(xmlChildren(rec[["enzymes"]]), 
-                 ~get_enzymes_links_rec(.x)))
+                 ~get_links_rec(.x)))
 }
 
-# Extract drug enzymes polypeptide df
-get_enzyme_polypeptide_rec <- function(r) {
-  enzyme_id = xmlValue(r[["id"]])
+
+get_transporters_links_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["transporters"]]), 
+                 ~get_links_rec(.x)))
+}
+
+
+get_carriers_links_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["carriers"]]), 
+                 ~get_links_rec(.x)))
+}
+
+
+get_targets_links_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["targets"]]), 
+                 ~get_links_rec(.x)))
+}
+
+# Extract drug polypeptide df
+get_polypeptide_rec <- function(r) {
+  parent_id = xmlValue(r[["id"]])
   p <- r[["polypeptide"]]
   if (!is.null(p)) {
     tibble(id = ifelse(is.null(xmlGetAttr(p, name = "id")), NA, xmlGetAttr(p, name = "id")),
@@ -380,17 +431,32 @@ get_enzyme_polypeptide_rec <- function(r) {
            amindo_acid_format = xmlGetAttr(p[["amino-acid-sequence"]], name = "format"),
            gene_sequence = xmlValue(p[["gene-sequence"]]),
            gene_format = xmlGetAttr(p[["gene-sequence"]], name = "format"),
-           enzyme_id = enzyme_id)
+           parent_id = parent_id)
   }
 }
 
 get_enzymes_polypeptide_df <- function(rec) {
   return (map_df(xmlChildren(rec[["enzymes"]]), 
-                 ~get_enzyme_polypeptide_rec(.x)))
+                 ~get_polypeptide_rec(.x)))
 }
 
-# Extract drug enzymes polypeptide_external_identifiers df
-get_enzymes_polypeptide_external_identifiers <- function(r) {
+get_transporters_polypeptide_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["transporters"]]), 
+                 ~get_polypeptide_rec(.x)))
+}
+
+get_carriers_polypeptide_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["carriers"]]), 
+                 ~get_polypeptide_rec(.x)))
+}
+
+get_targets_polypeptide_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["targets"]]), 
+                 ~get_polypeptide_rec(.x)))
+}
+
+# Extract drug polypeptide_external_identifiers df
+get_polypeptide_external_identifiers <- function(r) {
   p <- r[["polypeptide"]]
   if (!is.null(p)) {
     polypeptide_id <- ifelse(is.null(xmlGetAttr(p, name = "id")), NA, xmlGetAttr(p, name = "id"))
@@ -402,12 +468,27 @@ get_enzymes_polypeptide_external_identifiers <- function(r) {
 
 get_enzymes_polypeptide_external_identifiers_df <- function(rec) {
   return (map_df(xmlChildren(rec[["enzymes"]]), 
-                 ~get_enzymes_polypeptide_external_identifiers(.x)))
+                 ~get_polypeptide_external_identifiers(.x)))
+}
+
+get_transporters_polypeptide_external_identifiers_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["transporters"]]), 
+                 ~get_polypeptide_external_identifiers(.x)))
+}
+
+get_carriers_polypeptide_external_identifiers_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["carriers"]]), 
+                 ~get_polypeptide_external_identifiers(.x)))
+}
+
+get_targets_polypeptide_external_identifiers_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["targets"]]), 
+                 ~get_polypeptide_external_identifiers(.x)))
 }
 
 
-# Extract drug enzymes polypeptid synonyms df
-get_enzymes_polypeptide_synonyms <- function(r) {
+# Extract drug polypeptid synonyms df
+get_polypeptide_synonyms <- function(r) {
   p <- r[["polypeptide"]]
   if (!is.null(p)) {
     polypeptide_id <- ifelse(is.null(xmlGetAttr(p, name = "id")), NA, xmlGetAttr(p, name = "id"))
@@ -423,11 +504,26 @@ get_enzymes_polypeptide_synonyms <- function(r) {
 
 get_enzymes_polypeptide_synonyms_df <- function(rec) {
   return (map_df(xmlChildren(rec[["enzymes"]]), 
-                 ~get_enzymes_polypeptide_synonyms(.x)))
+                 ~get_polypeptide_synonyms(.x)))
 }
 
-# Extract drug enzymes polypeptide pfams df
-get_enzymes_polypeptide_pfams <- function(r) {
+get_transporters_polypeptide_synonyms_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["transporters"]]), 
+                 ~get_polypeptide_synonyms(.x)))
+}
+
+get_carriers_polypeptide_synonyms_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["carriers"]]), 
+                 ~get_polypeptide_synonyms(.x)))
+}
+
+get_targets_polypeptide_synonyms_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["targets"]]), 
+                 ~get_polypeptide_synonyms(.x)))
+}
+
+# Extract drug polypeptide pfams df
+get_polypeptide_pfams <- function(r) {
   p <- r[["polypeptide"]]
   if (!is.null(p)) {
     polypeptide_id <- ifelse(is.null(xmlGetAttr(p, name = "id")), NA, xmlGetAttr(p, name = "id"))
@@ -442,12 +538,27 @@ get_enzymes_polypeptide_pfams <- function(r) {
 
 get_enzymes_polypeptide_pfams_df <- function(rec) {
   return (map_df(xmlChildren(rec[["enzymes"]]), 
-                 ~get_enzymes_polypeptide_pfams(.x)))
+                 ~get_polypeptide_pfams(.x)))
+}
+
+get_targets_polypeptide_pfams_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["targets"]]), 
+                 ~get_polypeptide_pfams(.x)))
+}
+
+get_carriers_polypeptide_pfams_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["carriers"]]), 
+                 ~get_polypeptide_pfams(.x)))
+}
+
+get_transporters_polypeptide_pfams_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["transporters"]]), 
+                 ~get_polypeptide_pfams(.x)))
 }
 
 
-# Extract drug enzymes polypeptide go-classifiers df
-get_enzymes_polypeptide_go_classifiers <- function(r) {
+# Extract drug polypeptide go-classifiers df
+get_polypeptide_go_classifiers <- function(r) {
   p <- r[["polypeptide"]]
   if (!is.null(p)) {
     polypeptide_id <- ifelse(is.null(xmlGetAttr(p, name = "id")), NA, xmlGetAttr(p, name = "id"))
@@ -462,7 +573,22 @@ get_enzymes_polypeptide_go_classifiers <- function(r) {
 
 get_enzymes_polypeptide_go_classifiers_df <- function(rec) {
   return (map_df(xmlChildren(rec[["enzymes"]]), 
-                 ~get_enzymes_polypeptide_go_classifiers(.x)))
+                 ~get_polypeptide_go_classifiers(.x)))
+}
+
+get_transporters_polypeptide_go_classifiers_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["transporters"]]), 
+                 ~get_polypeptide_go_classifiers(.x)))
+}
+
+get_carriers_polypeptide_go_classifiers_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["carriers"]]), 
+                 ~get_polypeptide_go_classifiers(.x)))
+}
+
+get_targets_polypeptide_go_classifiers_df <- function(rec) {
+  return (map_df(xmlChildren(rec[["targets"]]), 
+                 ~get_polypeptide_go_classifiers(.x)))
 }
 
 # Extract drug reactions df
@@ -565,6 +691,10 @@ drug_carriers_actions <- map_df(children, ~get_carriers_actions_df(.x))
 drug_transporters_actions <- map_df(children, ~get_transporters_actions_df(.x))
 
 drug_enzymes_articles <- map_df(children, ~get_enzymes_articles_df(.x))
+drug_targets_articles <- map_df(children, ~get_targets_articles_df(.x))
+drug_carriers_articles <- map_df(children, ~get_carriers_articles_df(.x))
+drug_transporters_articles <- map_df(children, ~get_transporters_articles_df(.x))
+
 drug_enzymes_textbooks <- map_df(children, ~get_enzymes_textbooks_df(.x))
 drug_enzymes_links <- map_df(children, ~get_enzymes_links_df(.x))
 drug_enzymes_polypeptides <- map_df(children, ~get_enzymes_polypeptide_df(.x))
@@ -747,5 +877,8 @@ save_drug_sub(drug_targets, "drug_targets", primary_key = c("id", "drug_key"))
 save_drug_sub(drug_carriers_actions, "drug_carriers_actions", save_table_only = TRUE)
 save_drug_sub(drug_transporters_actions, "drug_transporter_actions", save_table_only = TRUE)
 save_drug_sub(drug_targets_actions, "drug_targets_actions", save_table_only = TRUE)
+save_drug_sub(drug_targets_articles, "drug_targets_articles", save_table_only = TRUE)
+save_drug_sub(drug_carriers_articles, "drug_carriers_articles", save_table_only = TRUE)
+save_drug_sub(drug_transporters_articles, "drug_transporters_articles", save_table_only = TRUE)
 # disconnect db
 dbDisconnect(conn = con)
