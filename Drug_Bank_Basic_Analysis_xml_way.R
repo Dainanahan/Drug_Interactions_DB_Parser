@@ -730,8 +730,20 @@ drug_transporters_polypeptide_synonyms <- map_df(children,
 
 drug_enzymes_polypeptide_pfams <-  map_df(children, 
                                           ~get_enzymes_polypeptide_pfams_df(.x))
+drug_targets_polypeptide_pfams <-  map_df(children, 
+                                          ~get_targets_polypeptide_pfams_df(.x))
+drug_carriers_polypeptide_pfams <-  map_df(children, 
+                                          ~get_carriers_polypeptide_pfams_df(.x))
+drug_transporters_polypeptide_pfams <-  map_df(children, 
+                                          ~get_transporters_polypeptide_pfams_df(.x))
 drug_enzymes_polypeptide_go_classifiers <-  map_df(children, 
                                             ~get_enzymes_polypeptide_go_classifiers_df(.x))
+drug_targets_polypeptide_go_classifiers <-  map_df(children, 
+                                                   ~get_targets_polypeptide_go_classifiers_df(.x))
+drug_transporters_polypeptide_go_classifiers <-  map_df(children, 
+                                                   ~get_transporters_polypeptide_go_classifiers_df(.x))
+drug_carriers_polypeptide_go_classifiers <-  map_df(children, 
+                                                   ~get_carriers_polypeptide_go_classifiers_df(.x))
 drug_reactions <-  map_df(children, ~get_reactions_df(.x))
 drug_reactions_enzymes <-  map_df(children, ~get_reactions_enzymes_df(.x))
 
@@ -901,7 +913,17 @@ save_drug_sub(drug_transporters_polypeptide_synonyms, "drug_transporters_polypep
               save_table_only = TRUE)
 
 save_drug_sub(drug_enzymes_polypeptide_pfams, "drug_enzymes_polypeptides_pfams", save_table_only = TRUE)
+save_drug_sub(drug_targets_polypeptide_pfams, "drug_targets_polypeptides_pfams", save_table_only = TRUE)
+save_drug_sub(drug_carriers_polypeptide_pfams, "drug_carriers_polypeptides_pfams", save_table_only = TRUE)
+save_drug_sub(drug_transporters_polypeptide_pfams, "drug_transporters_polypeptides_pfams", save_table_only = TRUE)
+
 save_drug_sub(drug_enzymes_polypeptide_go_classifiers, "drug_enzymes_polypeptides_go_classifiers",
+              save_table_only = TRUE)
+save_drug_sub(drug_targets_polypeptide_go_classifiers, "drug_enzymes_polypeptides_go_classifiers",
+              save_table_only = TRUE)
+save_drug_sub(drug_carriers_polypeptide_go_classifiers, "drug_enzymes_polypeptides_go_classifiers",
+              save_table_only = TRUE)
+save_drug_sub(drug_transporters_polypeptide_go_classifiers, "drug_enzymes_polypeptides_go_classifiers",
               save_table_only = TRUE)
 save_drug_sub(drug_reactions, "drug_reactions")
 save_drug_sub(drug_reactions_enzymes, "drug_reactions_enzymes")
