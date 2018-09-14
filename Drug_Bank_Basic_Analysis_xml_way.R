@@ -701,7 +701,15 @@ drug_carriers_textbooks <- map_df(children, ~get_carriers_textbooks_df(.x))
 drug_transporters_textbooks <- map_df(children, ~get_transporters_textbooks_df(.x))
 
 drug_enzymes_links <- map_df(children, ~get_enzymes_links_df(.x))
+drug_targets_links <- map_df(children, ~get_targets_links_df(.x))
+drug_carriers_links <- map_df(children, ~get_carriers_links_df(.x))
+drug_transporters_links <- map_df(children, ~get_transporters_links_df(.x))
+
 drug_enzymes_polypeptides <- map_df(children, ~get_enzymes_polypeptide_df(.x))
+drug_targets_polypeptides <- map_df(children, ~get_targets_polypeptide_df(.x))
+drug_carriers_polypeptides <- map_df(children, ~get_carriers_polypeptide_df(.x))
+drug_transporters_polypeptides <- map_df(children, ~get_transporters_polypeptide_df(.x))
+
 drug_enzymes_polypeptide_external_identifiers <- map_df(children, 
                                                         ~get_enzymes_polypeptide_external_identifiers_df(.x))
 
@@ -887,5 +895,8 @@ save_drug_sub(drug_transporters_articles, "drug_transporters_articles", save_tab
 save_drug_sub(drug_targets_textbooks, "drug_targets_textbooks", save_table_only = TRUE)
 save_drug_sub(drug_carriers_textbooks, "drug_carriers_textbooks", save_table_only = TRUE)
 save_drug_sub(drug_transporters_textbooks, "drug_transporters_textbooks", save_table_only = TRUE)
+save_drug_sub(drug_targets_links, "drug_targets_links", save_table_only = TRUE)
+save_drug_sub(drug_carriers_links, "drug_carriers_links", save_table_only = TRUE)
+save_drug_sub(drug_transporters_links, "drug_transporters_links", save_table_only = TRUE)
 # disconnect db
 dbDisconnect(conn = con)
