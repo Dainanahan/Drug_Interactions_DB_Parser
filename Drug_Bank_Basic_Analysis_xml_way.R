@@ -898,5 +898,39 @@ save_drug_sub(drug_transporters_textbooks, "drug_transporters_textbooks", save_t
 save_drug_sub(drug_targets_links, "drug_targets_links", save_table_only = TRUE)
 save_drug_sub(drug_carriers_links, "drug_carriers_links", save_table_only = TRUE)
 save_drug_sub(drug_transporters_links, "drug_transporters_links", save_table_only = TRUE)
+save_drug_sub(drug_targets_polypeptides, "drug_targets_polypeptides", save_table_only = TRUE,
+              field.types = list(general_function =
+                                   paste("varchar(",
+                                         max(nchar(drug_targets_polypeptides$general_function)), ")", sep = ""),
+                                 specific_function =
+                                   paste("varchar(max)", sep = ""),
+                                 amino_acid_sequence =
+                                   paste("varchar(max)", sep = ""),
+                                 gene_sequence =
+                                   paste("varchar(max)", sep = "")))
+save_drug_sub(drug_carriers_polypeptides, "drug_carriers_polypeptides", save_table_only = TRUE,
+              field.types = list(general_function =
+                                   paste("varchar(",
+                                         max(nchar(drug_carriers_polypeptides$general_function)), ")", sep = ""),
+                                 specific_function =
+                                   paste("varchar(",
+                                         max(nchar(drug_carriers_polypeptides$specific_function)), ")", sep = ""),
+                                 amino_acid_sequence =
+                                   paste("varchar(",
+                                         max(nchar(drug_carriers_polypeptides$amino_acid_sequence)), ")", sep = ""),
+                                 gene_sequence =
+                                   paste("varchar(max)", sep = "")))
+save_drug_sub(drug_transporters_polypeptides, "drug_transporters_polypeptides", save_table_only = TRUE,
+              field.types = list(general_function =
+                                   paste("varchar(",
+                                         max(nchar(drug_transporters_polypeptides$general_function)), ")", sep = ""),
+                                 specific_function =
+                                   paste("varchar(",
+                                         max(nchar(drug_transporters_polypeptides$specific_function)), ")", sep = ""),
+                                 amino_acid_sequence =
+                                   paste("varchar(",
+                                         max(nchar(drug_transporters_polypeptides$amino_acid_sequence)), ")", sep = ""),
+                                 gene_sequence =
+                                   paste("varchar(max)", sep = "")))
 # disconnect db
 dbDisconnect(conn = con)
