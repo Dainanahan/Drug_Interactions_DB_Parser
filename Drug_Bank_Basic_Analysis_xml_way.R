@@ -1,4 +1,5 @@
-library(XML)
+# required librries
+library(XML) 
 library(purrr)
 library(tibble)
 library(magrittr)
@@ -7,6 +8,7 @@ library(DBI)
 # read and parse the xml database
 drugbank_db <- xmlParse("drugbank.xml")
 top <- xmlRoot(drugbank_db)
+children <- xmlChildren(top)
 
 # Extract drug df
 drug_df <- function(rec) {
@@ -70,100 +72,32 @@ drug_df <- function(rec) {
   )
 }
 
-# Extract drug groups df
-drug_groups_df <- function(rec) {
-  drug_key <- xmlValue(rec["drugbank-id"][[1]])
-  groups <- xmlToDataFrame(rec[["groups"]])
-  if (nrow(groups) > 0) {
-    groups$drug_key <- drug_key
-  } 
+drug_sub_df <- function(rec, main_node, seconadary_node = NULL,
+                        id = "drugbank-id", byValue = FALSE) {
+  parent_key <- NULL
+  if(!is.null(id)) {
+    parent_key <- xmlValue(rec[id][[1]])
+  }
   
-  return(groups)
-}
-
-# Extract drug articles df
-drug_articles_df <- function(rec) {
-  drug_key <- xmlValue(rec["drugbank-id"][[1]])
-  articles <- xmlToDataFrame(rec[["general-references"]][["articles"]])
-  if (nrow(articles) > 0) {
-    articles$drug_key <- drug_key 
+  if (byValue) {
+    df <- map_df(rec[main_node], xmlValue)
+  } else {
+    if (is.null(seconadary_node)) {
+      df <- xmlToDataFrame(rec[[main_node]])
+    } else {
+      df <- xmlToDataFrame(rec[[main_node]][[seconadary_node]])
+    }
+    
   }
-  return(articles)
-}
-
-# Extract drug books df
-drug_books_df <- function(rec) {
-  drug_key <- xmlValue(rec["drugbank-id"][[1]])
-  books <- xmlToDataFrame(rec[["general-references"]][["textbooks"]])
-  if (nrow(books) > 0) {
-    books$drug_key <- drug_key 
-  }
-  return(books)
-}
-
-# Extract drug links df
-drug_links_df <- function(rec) {
-  drug_key <- xmlValue(rec["drugbank-id"][[1]])
-  links <- xmlToDataFrame(rec[["general-references"]][["links"]])
-  if (nrow(links) > 0) {
-    links$drug_key <- drug_key 
-  }
-  return(links)
-}
-
-# Extract drug classfications df
-drug_classfications_df <- function(rec) {
-  drug_key <- xmlValue(rec["drugbank-id"][[1]])
-  classfications <- map_df(rec["classification"], xmlValue)
-  if (nrow(classfications) > 0) {
-    classfications$drug_key <- drug_key 
-  }
-  return(classfications)
-}
-
-# Extract drug synonyms df
-drug_synonyms_df <- function(rec) {
-  drug_key <- xmlValue(rec["drugbank-id"][[1]])
-  synonyms <- xmlToDataFrame(rec[["synonyms"]])
-  if (nrow(synonyms) > 0) {
-    synonyms$drug_key <- drug_key 
-  }
-  return(synonyms)
-}
-
-# Extract drug products df
-drug_products_df <- function(rec) {
-  drug_key <- xmlValue(rec["drugbank-id"][[1]])
-  products <- xmlToDataFrame(rec[["products"]])
-  if (nrow(products) > 0) {
-    products$drug_key <- drug_key 
-  }
-  return(products)
-}
-
-# Extract drug mixtures df
-drug_mixtures_df <- function(rec) {
-  drug_key <- xmlValue(rec["drugbank-id"][[1]])
-  mixtures <- xmlToDataFrame(rec[["mixtures"]])
-  if (nrow(mixtures) > 0) {
-    mixtures$drug_key <- drug_key 
-  }
-  return(mixtures)
-}
-
-# Extract drug packagers df
-drug_sub_df <- function(rec, main_node) {
-  drug_key <- xmlValue(rec["drugbank-id"][[1]])
-  df <- xmlToDataFrame(rec[[main_node]])
-  if (nrow(df) > 0) {
-    df$drug_key <- drug_key 
+  
+  if (nrow(df) > 0 && !is.null(parent_key)) {
+    df$parent_key <- parent_key 
   }
   return(df)
-  
 }
 
 # Extract drug manufacturers df
-get_manufacturer_Rec <- function(r, drug_key) {
+get_manufacturer_rec <- function(r, drug_key) {
   tibble(
     name = xmlValue(r),
     url = xmlGetAttr(r, name="url"),
@@ -172,7 +106,8 @@ get_manufacturer_Rec <- function(r, drug_key) {
   )
 }
 get_manufactures_df <- function(rec) {
-  return (map_df(xmlChildren(rec[["manufacturers"]]), ~get_manufacturer_Rec(., xmlValue(rec["drugbank-id"][[1]]))))
+  return (map_df(xmlChildren(rec[["manufacturers"]]),
+                 ~get_manufacturer_rec(., xmlValue(rec["drugbank-id"][[1]]))))
 }
 
 # Extract drug prices df
@@ -186,7 +121,8 @@ get_price_rec <- function(r, drug_key) {
   )
 }
 get_pricess_df <- function(rec) {
-  return (map_df(xmlChildren(rec[["prices"]]), ~get_price_rec(., xmlValue(rec["drugbank-id"][[1]]))))
+  return (map_df(xmlChildren(rec[["prices"]]),
+                 ~get_price_rec(., xmlValue(rec["drugbank-id"][[1]]))))
 }
 
 # Extract drug atc-codes df
@@ -225,32 +161,15 @@ get_pathways_df <- function(rec) {
 }
 
 # Extract drug pathways drugs df
-get_pathway_drugs_rec <- function(r) {
-  smpdb_id = xmlValue(r[["smpdb-id"]])
-  drugs <- xmlToDataFrame(r[["drugs"]])
-  drugs$smpdb_id <- smpdb_id
-  return(drugs)
-}
-
 get_pathways_drugs_df <- function(rec) {
-  return (map_df(xmlChildren(rec[["pathways"]]), 
-                 ~get_pathway_drugs_rec(.x)))
+  return(map_df(xmlChildren(rec[["pathways"]]),
+                ~drug_sub_df(.x, "drugs", id = "smpdb-id")))
 }
 
 # Extract drug pathways enzymes df
-get_pathway_enzymes_rec <- function(r) {
-  smpdb_id = xmlValue(r[["smpdb-id"]])
-  enzymes <- xmlToDataFrame(r[["enzymes"]])
-  if (nrow(enzymes) > 0) {
-    enzymes$smpdb_id <- smpdb_id
-  }
-  
-  return(enzymes)
-}
-
 get_pathways_enzymes_df <- function(rec) {
-  return (map_df(xmlChildren(rec[["pathways"]]), 
-                 ~get_pathway_enzymes_rec(.x)))
+  return(map_df(xmlChildren(rec[["pathways"]]),
+                ~drug_sub_df(.x, "enzymes", id = "smpdb-id")))
 }
 
 # Extract drug enzymes df
@@ -272,139 +191,93 @@ get_enzymes_df <- function(rec) {
 }
 
 # Extract drug enzymes actions df
-get_enzymes_actions_rec <- function(r, drug_key) {
-  parentid = xmlValue(r[["id"]])
-  actions <- xmlToDataFrame(r[["actions"]])
-  if (nrow(actions) > 0) {
-    actions$parent_id <- parentid
-    actions$drug_key <- drug_key
-  }
-  
-  return(actions)
-}
-
 get_enzymes_actions_df <- function(rec) {
-  return (map_df(xmlChildren(rec[["enzymes"]]), 
-                 ~get_enzymes_actions_rec(.x,
-                                          xmlValue(rec["drugbank-id"][[1]]))))
+  return(map_df(xmlChildren(rec[["enzymes"]]),
+                ~drug_sub_df(.x, "actions", id = "id")))
 }
 
 get_targets_actions_df <- function(rec) {
-  return (map_df(xmlChildren(rec[["targets"]]), 
-                 ~get_enzymes_actions_rec(.x,
-                                          xmlValue(rec["drugbank-id"][[1]]))))
+  return(map_df(xmlChildren(rec[["targets"]]),
+                ~drug_sub_df(.x, "actions", id = "id")))
 }
 
 get_carriers_actions_df <- function(rec) {
-  return (map_df(xmlChildren(rec[["enzymes"]]), 
-                 ~get_enzymes_actions_rec(.x,
-                                          xmlValue(rec["drugbank-id"][[1]]))))
+  return(map_df(xmlChildren(rec[["carriers"]]),
+                ~drug_sub_df(.x, "actions", id = "id")))
 }
 
 get_transporters_actions_df <- function(rec) {
-  return (map_df(xmlChildren(rec[["enzymes"]]), 
-                 ~get_enzymes_actions_rec(.x,
-                                          xmlValue(rec["drugbank-id"][[1]]))))
+  return(map_df(xmlChildren(rec[["transporters"]]),
+                ~drug_sub_df(.x, "actions", id = "id")))
 }
 
 
 # Extract drug articles df
-get_articles_rec <- function(r) {
-  parent_id = xmlValue(r[["id"]])
-  articles <- xmlToDataFrame(r[["references"]][["articles"]])
-  if (nrow(articles) > 0) {
-    articles$parent_id <- parent_id
-  }
-  
-  return(articles)
-}
-
 get_enzymes_articles_df <- function(rec) {
-  return (map_df(xmlChildren(rec[["enzymes"]]), 
-                 ~get_articles_rec(.x)))
+  return(map_df(xmlChildren(rec[["enzymes"]]),
+                ~drug_sub_df(.x, "references", seconadary_node = "articles", id = "id")))
 }
 
 get_transporters_articles_df <- function(rec) {
-  return (map_df(xmlChildren(rec[["transporters"]]), 
-                 ~get_articles_rec(.x)))
+  return(map_df(xmlChildren(rec[["transporters"]]),
+                ~drug_sub_df(.x, "references", seconadary_node = "articles", id = "id")))
 }
 
 get_carriers_articles_df <- function(rec) {
-  return (map_df(xmlChildren(rec[["carriers"]]), 
-                 ~get_articles_rec(.x)))
+  return(map_df(xmlChildren(rec[["carriers"]]),
+                ~drug_sub_df(.x, "references", seconadary_node = "articles", id = "id")))
 }
 
 get_targets_articles_df <- function(rec) {
-  return (map_df(xmlChildren(rec[["targets"]]), 
-                 ~get_articles_rec(.x)))
+  return(map_df(xmlChildren(rec[["targets"]]),
+                ~drug_sub_df(.x, "references", seconadary_node = "articles", id = "id")))
 }
 
 # Extract drug textbooks df
-get_textbooks_rec <- function(r) {
-  parent_id = xmlValue(r[["id"]])
-  textbooks <- xmlToDataFrame(r[["references"]][["textbooks"]])
-  if (nrow(textbooks) > 0) {
-    textbooks$parent_id <- parent_id
-  }
-  
-  return(textbooks)
-}
 
 get_enzymes_textbooks_df <- function(rec) {
-  return (map_df(xmlChildren(rec[["enzymes"]]), 
-                 ~get_textbooks_rec(.x)))
+  return(map_df(xmlChildren(rec[["enzymes"]]),
+                ~drug_sub_df(.x, "references", seconadary_node = "textbooks", id = "id")))
 }
 
 
 get_transporters_textbooks_df <- function(rec) {
-  return (map_df(xmlChildren(rec[["transporters"]]), 
-                 ~get_textbooks_rec(.x)))
+  return(map_df(xmlChildren(rec[["transporters"]]),
+                ~drug_sub_df(.x, "references", seconadary_node = "textbooks", id = "id")))
 }
 
 get_carriers_textbooks_df <- function(rec) {
-  return (map_df(xmlChildren(rec[["carriers"]]), 
-                 ~get_textbooks_rec(.x)))
+  return(map_df(xmlChildren(rec[["carriers"]]),
+                ~drug_sub_df(.x, "references", seconadary_node = "textbooks", id = "id")))
 }
 
-
-
 get_targets_textbooks_df <- function(rec) {
-  return (map_df(xmlChildren(rec[["targets"]]), 
-                 ~get_textbooks_rec(.x)))
+  return(map_df(xmlChildren(rec[["targets"]]),
+                ~drug_sub_df(.x, "references", seconadary_node = "textbooks", id = "id")))
 }
 
 # Extract drug links df
-get_links_rec <- function(r) {
-  parent_id = xmlValue(r[["id"]])
-  links <- xmlToDataFrame(r[["references"]][["links"]])
-  if (nrow(links) > 0) {
-    links$parent_id <- parent_id
-  }
-  
-  return(links)
-}
-
 get_enzymes_links_df <- function(rec) {
-  return (map_df(xmlChildren(rec[["enzymes"]]), 
-                 ~get_links_rec(.x)))
+  return(map_df(xmlChildren(rec[["enzymes"]]),
+                ~drug_sub_df(.x, "references", seconadary_node = "links", id = "id")))
 }
 
 
 get_transporters_links_df <- function(rec) {
-  return (map_df(xmlChildren(rec[["transporters"]]), 
-                 ~get_links_rec(.x)))
+  return(map_df(xmlChildren(rec[["transporters"]]),
+                ~drug_sub_df(.x, "references", seconadary_node = "links", id = "id")))
 }
 
 
 get_carriers_links_df <- function(rec) {
-  return (map_df(xmlChildren(rec[["carriers"]]), 
-                 ~get_links_rec(.x)))
+  return(map_df(xmlChildren(rec[["carriers"]]),
+                ~drug_sub_df(.x, "references", seconadary_node = "links", id = "id")))
 }
 
 
 get_targets_links_df <- function(rec) {
-  return (map_df(xmlChildren(rec[["targets"]]), 
-                 ~get_links_rec(.x)))
+  return(map_df(xmlChildren(rec[["targets"]]),
+                ~drug_sub_df(.x, "references", seconadary_node = "links", id = "id")))
 }
 
 # Extract drug polypeptide df
@@ -494,7 +367,7 @@ get_polypeptide_synonyms <- function(r) {
     polypeptide_id <- ifelse(is.null(xmlGetAttr(p, name = "id")), NA, xmlGetAttr(p, name = "id"))
     polypeptide_synonyms <- p[["synonyms"]]
     if (xmlSize(polypeptide_synonyms) > 0) {
-      tibble(
+       tibble(
         synonyms =  paste(xmlApply(polypeptide_synonyms, xmlValue), collapse = ","),
         polypeptide_id = polypeptide_id 
       )
@@ -592,7 +465,7 @@ get_targets_polypeptide_go_classifiers_df <- function(rec) {
 }
 
 # Extract drug reactions df
-get_reactions_Rec <- function(r, drug_key) {
+get_reactions_rec <- function(r, drug_key) {
   tibble(
     sequence = xmlValue(r[["sequence"]]),
     left_drugbank_id = xmlValue(r[["left-element"]][["drugbank-id"]]),
@@ -603,22 +476,15 @@ get_reactions_Rec <- function(r, drug_key) {
   )
 }
 get_reactions_df <- function(rec) {
-  return (map_df(xmlChildren(rec[["reactions"]]), ~get_reactions_Rec(., xmlValue(rec["drugbank-id"][[1]]))))
+  return (map_df(xmlChildren(rec[["reactions"]]), 
+                 ~get_reactions_rec(., xmlValue(rec["drugbank-id"][[1]]))))
 }
 
 # Extract drug reactions enzymes df
-get_reactions_enzymes_rec <- function(r, drug_key) {
-  enzymes <- xmlToDataFrame(r[["enzymes"]])
-  if (nrow(enzymes) > 0) {
-    enzymes$drug_key = drug_key
-  }
-  return (enzymes)
-  
-}
 get_reactions_enzymes_df <- function(rec) {
-  return (map_df(xmlChildren(rec[["reactions"]]), ~get_reactions_enzymes_rec(., xmlValue(rec["drugbank-id"][[1]]))))
+  return (map_df(xmlChildren(rec[["reactions"]]),
+                 ~drug_sub_df(.x, "enzymes", id = NULL)))
 }
-
 
 
 # Extract drug carriers df
@@ -651,17 +517,24 @@ get_transporters_df <- function(rec) {
                                   xmlValue(rec["drugbank-id"][[1]]))))
 }
 
-#max(nchar(a$absorption))
-children <- xmlChildren(top)
+# Extract drug classfications df
+drug_classfications_df <- function(rec) {
+  a <- xmlToList(top[[1]][["classification"]])
+  return(tibble(
+    drug_key = xmlValue(rec["drugbank-id"][[1]]),
+    classifications = paste(names(a), a, collapse = ";")
+  ))
+}
+
 drug <- map_df(children, ~drug_df(.x))
-drug_groups <- map_df(children, ~drug_groups_df(.x))
-drug_articles <- map_df(children, ~drug_articles_df(.x))
-drug_books <- map_df(children, ~drug_books_df(.x))
-drug_links <- map_df(children, ~drug_links_df(.x))
+drug_groups <- map_df(children, ~drug_sub_df(.x, "groups"))
+drug_articles <- map_df(children, ~drug_sub_df(.x, "general-references", seconadary_node = "articles"))
+drug_books <- map_df(children, ~drug_sub_df(.x, "general-references", seconadary_node = "textbooks"))
+drug_links <- map_df(children, ~drug_sub_df(.x, "general-references", seconadary_node = "links"))
 drug_classfications <- map_df(children, ~drug_classfications_df(.x))
-drug_synonyms <- map_df(children, ~drug_synonyms_df(.x))
-drug_products <- map_df(children, ~drug_products_df(.x))
-drug_mixture <- map_df(children, ~drug_mixtures_df(.x))
+drug_synonyms <- map_df(children, ~drug_sub_df(.x, "synonyms"))
+drug_products <- map_df(children, ~drug_sub_df(.x, "products"))
+drug_mixtures <- map_df(children, ~drug_sub_df(.x, "mixtures"))
 drug_packagers <- map_df(children, ~drug_sub_df(.x, "packagers"))
 drug_manufacturers <- map_df(children, ~get_manufactures_df(.x))
 drug_prices <- map_df(children, ~get_pricess_df(.x))
