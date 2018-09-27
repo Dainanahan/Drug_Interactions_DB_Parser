@@ -583,10 +583,6 @@ get_xml_db_rows <- function (xml_db_name) {
 }
 
 extract_data_frames <- function(children) {
-#   drug_synonyms <- map_df(children, ~drug_sub_df(.x, "synonyms"))
-#   show_progress(what = "successfully parsed drug table   ", 8)
-#   drug_products <- map_df(children, ~drug_sub_df(.x, "products"))
-#   show_progress(what = "successfully parsed drug table   ", 9)
 #   drug_mixtures <- map_df(children, ~drug_sub_df(.x, "mixtures"))
 #   show_progress(what = "successfully parsed drug table   ", 10)
 #   drug_packagers <- map_df(children, ~drug_sub_df(.x, "packagers"))

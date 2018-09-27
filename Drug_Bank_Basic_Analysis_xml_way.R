@@ -64,6 +64,12 @@ parse_drug_synonyms <- function() {
   return(drug_synonyms)
 }
 
+parse_drug_products <- function() {
+  drug_products <- map_df(children, ~drug_sub_df(.x, "products"))
+  save_drug_sub(con = con, df = drug_products, table_name = "drug_products")
+  return(drug_products)
+}
+
 init(xml_db_name =  "drugbank.xml", driver = "SQL Server",
      server = "MOHAMMED\\SQL2016", output_database = "drugbank2")
 
@@ -74,15 +80,7 @@ parse_drug_books()
 parse_drug_links()
 parse_drug_classfications()
 parse_drug_synonyms()
-
-
-#store drug synonyms in db
-dbWriteTable(conn = con, value = drug_synonyms, name = "drug_synonyms")
-# add foreign key of drug table
-dbExecute(conn = con, statement = "Alter table drug_synonyms
-          alter column drug_key varchar(255) NOT NULL;")
-dbExecute(conn = con, statement = "Alter table drug_synonyms ADD CONSTRAINT FK_synonyms_drug 
-          FOREIGN KEY (drug_key) REFERENCES drug(primary_key);")
+parse_drug_products()
 
 #store drug products in db
 dbWriteTable(conn = con, value = drug_products, name = "drug_products")
